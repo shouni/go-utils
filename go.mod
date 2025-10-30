@@ -1,4 +1,4 @@
-module github.com/shouni/go-utils v1.0.0
+module github.com/shouni/go-utils
 
 go 1.22
 
