@@ -1,11 +1,12 @@
 package text_test
 
 import (
-	"github.com/shouni/go-utils/text"
 	"testing"
+
+	"github.com/shouni/go-utils/text"
 )
 
-func TestCleanStringFromEmojis(t *testing.T) { // 関数名を CleanStringFromEmojis に合わせることを推奨
+func TestCleanStringFromEmojis(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -65,7 +66,6 @@ func TestCleanStringFromEmojis(t *testing.T) { // 関数名を CleanStringFromEm
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// ここでテスト対象の関数名を CleanStringFromEmojis に修正
 			actual := text.CleanStringFromEmojis(tt.input)
 			if actual != tt.expected {
 				t.Errorf("CleanStringFromEmojis(%q) = %q, 期待値 %q", tt.input, actual, tt.expected)
