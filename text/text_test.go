@@ -1,7 +1,7 @@
 package text_test
 
 import (
-	"github.com/shouni/go-utils/text" // パッケージ名を 'text' と仮定
+	"github.com/shouni/go-utils/text"
 	"testing"
 )
 
