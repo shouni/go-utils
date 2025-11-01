@@ -8,36 +8,38 @@ import (
 	"os"
 )
 
-// ReadInput は、ファイルまたは標準入力から内容を読み込みます。
+// ReadInput reads content from a file or stdin.
+// NOTE: Large file support is currently deferred. The entire file is read into memory.
 func ReadInput(filename string) ([]byte, error) {
 	if filename != "" {
-		fmt.Fprintf(os.Stderr, "ファイルから読み込み中: %s\n", filename)
+		// Log removed: Library functions should not directly output progress messages to os.Stderr.
 		return os.ReadFile(filename)
 	}
 
-	fmt.Fprintln(os.Stderr, "標準入力 (stdin) から読み込み中...")
+	// Log removed: Library functions should not directly output progress messages to os.Stderr.
 	content, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		return nil, fmt.Errorf("標準入力からの読み込みに失敗しました: %w", err)
+		// Error message translated to English.
+		return nil, fmt.Errorf("failed to read from stdin: %w", err)
 	}
 	return content, nil
 }
 
-// WriteOutput は、ファイルまたは標準出力に内容を書き出します。
-func WriteOutput(filename string, content string) error {
+// WriteOutput writes content to a file or stdout.
+// NOTE: Large file support is currently deferred. The entire content is written from memory.
+func WriteOutput(filename string, content []byte) error { // content string から content []byte に変更
 	if filename != "" {
-		fmt.Fprintf(os.Stderr, "\n--- スクリプト生成完了 ---\nファイルに書き込みました: %s\n", filename)
-		// 【注意】大ファイル対応は現状見送り。ファイル全体をメモリに書き込みます。
-		return os.WriteFile(filename, []byte(content), 0644)
+		// Log removed: Library functions should not directly output completion messages to os.Stderr.
+		return os.WriteFile(filename, content, 0644) // []byte(content) の変換が不要に
 	}
 
-	fmt.Fprintln(os.Stderr, "\n--- スクリプト生成結果 ---")
-	// スクリプト本体は標準出力に出力 (パイプ処理を考慮)
+	// Log removed: Library functions should not directly output result separators to os.Stderr.
 
-	// fmt.Fprint を使用して、余分な改行を入れずに content を出力
-	_, err := fmt.Fprint(os.Stdout, content)
+	// os.Stdout.Write を使用し、fmt.Fprint や fmt.Fprintln のオーバーヘッドを回避
+	_, err := os.Stdout.Write(content)
 	if err != nil {
-		return fmt.Errorf("標準出力への書き込みに失敗しました: %w", err)
+		// Error message translated to English.
+		return fmt.Errorf("failed to write to stdout: %w", err)
 	}
 	return nil
 }
