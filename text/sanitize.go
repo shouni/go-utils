@@ -25,3 +25,11 @@ func CleanStringFromEmojis(s string) string {
 	s = NormalizeSpaces(s)
 	return s
 }
+
+// NormalizeText removes all newlines and tabs from the input string and normalizes spaces.
+func NormalizeText(text string) string {
+	text = strings.ReplaceAll(text, "\n", " ")
+	text = strings.ReplaceAll(text, "\t", " ")
+	text = strings.Join(strings.Fields(text), " ")
+	return strings.TrimSpace(text)
+}
