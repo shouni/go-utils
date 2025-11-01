@@ -25,11 +25,15 @@ func ReadInput(filename string) ([]byte, error) {
 func WriteOutput(filename string, content string) error {
 	if filename != "" {
 		fmt.Fprintf(os.Stderr, "\n--- スクリプト生成完了 ---\nファイルに書き込みました: %s\n", filename)
+		// 【レビュー指摘 B】大ファイル対応は現状見送り
 		return os.WriteFile(filename, []byte(content), 0644)
 	}
 
 	fmt.Fprintln(os.Stderr, "\n--- スクリプト生成結果 ---")
 	// スクリプト本体は標準出力に出力 (パイプ処理を考慮)
-	fmt.Fprintln(os.Stdout, content)
+	_, err := fmt.Fprintln(os.Stdout, content)
+	if err != nil {
+		return fmt.Errorf("標準出力への書き込みに失敗しました: %w", err)
+	}
 	return nil
 }
