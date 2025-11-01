@@ -30,6 +30,5 @@ func CleanStringFromEmojis(s string) string {
 func NormalizeText(text string) string {
 	text = strings.ReplaceAll(text, "\n", " ")
 	text = strings.ReplaceAll(text, "\t", " ")
-	text = strings.Join(strings.Fields(text), " ")
-	return strings.TrimSpace(text)
+	return strings.Join(strings.Fields(text), " ")
 }
