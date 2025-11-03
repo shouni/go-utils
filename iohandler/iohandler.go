@@ -1,5 +1,5 @@
-// Package iohandler provides utility functions for reading content from files or stdin
-// and writing content to files or stdout.
+// Package iohandler は、ファイルまたは標準入力からのコンテンツの読み込みと、
+// ファイルまたは標準出力へのコンテンツの書き出しを行うユーティリティ関数を提供します。
 package iohandler
 
 import (
@@ -8,38 +8,51 @@ import (
 	"os"
 )
 
-// ReadInput reads content from a file or stdin.
-// NOTE: Large file support is currently deferred. The entire file is read into memory.
+// ReadInput は、指定されたファイル、またはファイル名が空の場合は標準入力から
+// コンテンツを読み込み、バイトスライス ([]byte) で返します。
+// 注意: 現在、大きなファイルをサポートしていません。コンテンツ全体がメモリに読み込まれます。
 func ReadInput(filename string) ([]byte, error) {
 	if filename != "" {
-		// Log removed: Library functions should not directly output progress messages to os.Stderr.
 		return os.ReadFile(filename)
 	}
 
-	// Log removed: Library functions should not directly output progress messages to os.Stderr.
 	content, err := io.ReadAll(os.Stdin)
 	if err != nil {
-		// Error message translated to English.
-		return nil, fmt.Errorf("failed to read from stdin: %w", err)
+		// エラーメッセージも日本語に修正します
+		return nil, fmt.Errorf("標準入力からの読み込みに失敗しました: %w", err)
 	}
 	return content, nil
 }
 
-// WriteOutput writes content to a file or stdout.
-// NOTE: Large file support is currently deferred. The entire content is written from memory.
-func WriteOutput(filename string, content []byte) error { // content string から content []byte に変更
+// ReadInputString は、指定されたファイル、または標準入力からコンテンツを読み込み、
+// 文字列 (string) で返します。
+// 内部で ReadInput を呼び出し、結果を string にキャストします。
+func ReadInputString(filename string) (string, error) {
+	content, err := ReadInput(filename)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
+// WriteOutput は、コンテンツ (バイトスライス) をファイル、または標準出力に出力します。
+// 注意: 現在、大きなファイルをサポートしていません。コンテンツ全体がメモリから書き込まれます。
+func WriteOutput(filename string, content []byte) error {
 	if filename != "" {
-		// Log removed: Library functions should not directly output completion messages to os.Stderr.
-		return os.WriteFile(filename, content, 0644) // []byte(content) の変換が不要に
+		return os.WriteFile(filename, content, 0644)
 	}
 
-	// Log removed: Library functions should not directly output result separators to os.Stderr.
-
-	// os.Stdout.Write を使用し、fmt.Fprint や fmt.Fprintln のオーバーヘッドを回避
+	// os.Stdout.Write を使用し、標準出力にバイトスライスを直接書き込みます。
 	_, err := os.Stdout.Write(content)
 	if err != nil {
-		// Error message translated to English.
-		return fmt.Errorf("failed to write to stdout: %w", err)
+		// エラーメッセージも日本語に修正します
+		return fmt.Errorf("標準出力への書き込みに失敗しました: %w", err)
 	}
 	return nil
+}
+
+// WriteOutputString は、コンテンツ (文字列) をファイル、または標準出力に出力します。
+// 内部で content を []byte にキャストし、WriteOutput を呼び出します。
+func WriteOutputString(filename string, content string) error {
+	return WriteOutput(filename, []byte(content))
 }
