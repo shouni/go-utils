@@ -26,7 +26,10 @@ func CleanStringFromEmojis(s string) string {
 }
 
 // Truncate は、指定された文字列を rune (文字) の数で最大長まで切り詰め、必要に応じてサフィックスを追加します。
-// maxLen が負の値の場合は、0として扱われます。
+//
+// 注意: 切り詰められた文字列の末尾に空白文字が残った場合、サフィックスを付加する前に
+// strings.TrimSpaceを使用してその末尾の空白は無条件に削除されます。
+// これは、ログ出力や表示用途で不要な末尾スペースを排除し、サフィックスを綺麗に付加するための仕様です
 func Truncate(s string, maxLen int, suffix string) string {
 	if maxLen <= 0 {
 		// maxLen が0以下の場合、入力文字列が空でなければサフィックスのみを返す
