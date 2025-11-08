@@ -32,11 +32,7 @@ func CleanStringFromEmojis(s string) string {
 // これは、ログ出力や表示用途で不要な末尾スペースを排除し、サフィックスを綺麗に付加するための仕様です
 func Truncate(s string, maxLen int, suffix string) string {
 	if maxLen <= 0 {
-		// maxLen が0以下の場合、入力文字列が空でなければサフィックスのみを返す
-		if s != "" {
-			return suffix
-		}
-		return s
+		return ""
 	}
 
 	// 1. 文字列を rune のスライスに変換 (マルチバイト対応)
@@ -51,7 +47,6 @@ func Truncate(s string, maxLen int, suffix string) string {
 	truncatedRuneSlice := runes[:maxLen]
 
 	// 4. rune スライスを文字列に戻し、末尾スペースを削除
-	//    末尾スペース削除は、切り詰めによってスペースが残った場合に対応
 	truncatedString := strings.TrimSpace(string(truncatedRuneSlice))
 
 	return truncatedString + suffix

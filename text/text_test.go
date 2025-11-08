@@ -84,25 +84,25 @@ func TestTruncate(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "クリティカル: maxLenが負の値 (-1)",
+			name:     "エッジケース: maxLenが負の値 (-1)", // ★ テスト名を修正
 			input:    "テストテキスト",
 			maxLen:   -1,
 			suffix:   "...",
-			expected: "...", // 負の値は0として扱われ、サフィックスのみが返される
+			expected: "", // ★ 期待値を修正 (空文字列を返す)
 		},
 		{
-			name:     "クリティカル: maxLenがゼロ (0)",
+			name:     "エッジケース: maxLenがゼロ (0)", // ★ テスト名を修正
 			input:    "テストテキスト",
 			maxLen:   0,
 			suffix:   "...",
-			expected: "...", // 0として扱われ、サフィックスのみが返される
+			expected: "", // ★ 期待値を修正 (空文字列を返す)
 		},
 		{
-			name:     "クリティカル: maxLenがゼロ (0) かつ空文字列",
+			name:     "エッジケース: maxLenがゼロ (0) かつ空文字列",
 			input:    "",
 			maxLen:   0,
 			suffix:   "...",
-			expected: "", // 入力が空の場合は、サフィックスも付加されない
+			expected: "", // 期待値は元々正しい
 		},
 		{
 			name:     "最大長より短い文字列",
