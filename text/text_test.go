@@ -73,3 +73,108 @@ func TestCleanStringFromEmojis(t *testing.T) {
 		})
 	}
 }
+
+// TestTruncate 関数のテスト
+func TestTruncate(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		maxLen   int
+		suffix   string
+		expected string
+	}{
+		{
+			name:     "エッジケース: maxLenが負の値 (-1)", // ★ テスト名を修正
+			input:    "テストテキスト",
+			maxLen:   -1,
+			suffix:   "...",
+			expected: "", // ★ 期待値を修正 (空文字列を返す)
+		},
+		{
+			name:     "エッジケース: maxLenがゼロ (0)", // ★ テスト名を修正
+			input:    "テストテキスト",
+			maxLen:   0,
+			suffix:   "...",
+			expected: "", // ★ 期待値を修正 (空文字列を返す)
+		},
+		{
+			name:     "エッジケース: maxLenがゼロ (0) かつ空文字列",
+			input:    "",
+			maxLen:   0,
+			suffix:   "...",
+			expected: "", // 期待値は元々正しい
+		},
+		{
+			name:     "最大長より短い文字列",
+			input:    "Hello",
+			maxLen:   10,
+			suffix:   "...",
+			expected: "Hello",
+		},
+		{
+			name:     "最大長と等しい文字列",
+			input:    "HelloWorld",
+			maxLen:   10,
+			suffix:   "...",
+			expected: "HelloWorld",
+		},
+		{
+			name:     "最大長を超える文字列 (サフィックスあり)",
+			input:    "This is a long text.",
+			maxLen:   10,
+			suffix:   "...",
+			expected: "This is a...",
+		},
+		{
+			name:     "最大長を超える文字列 (サフィックスなし)",
+			input:    "This is a long text.",
+			maxLen:   10,
+			suffix:   "",
+			expected: "This is a",
+		},
+		{
+			name:     "切り詰めた末尾がスペースの場合",
+			input:    "ABCDEFGHI JKLM",
+			maxLen:   11,
+			suffix:   "...",
+			expected: "ABCDEFGHI J...",
+		},
+		{
+			name:     "空文字列",
+			input:    "",
+			maxLen:   5,
+			suffix:   "...",
+			expected: "",
+		},
+		{
+			name:     "マルチバイト文字を含む (rune長で切り詰め)",
+			input:    "あいうえお",
+			maxLen:   3,
+			suffix:   "...",
+			expected: "あいう...",
+		},
+		{
+			name:     "マルチバイト文字を最大長より多く指定",
+			input:    "あいうえお",
+			maxLen:   7,
+			suffix:   "...",
+			expected: "あいうえお",
+		},
+		{
+			name:     "末尾に空白がある日本語",
+			input:    "テストテキスト　　です。 ",
+			maxLen:   6,
+			suffix:   "...",
+			expected: "テストテキス...",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := text.Truncate(tt.input, tt.maxLen, tt.suffix)
+			if actual != tt.expected {
+				t.Errorf("Truncate(%q, %d, %q) = %q, 期待値 %q", tt.input, tt.maxLen, tt.suffix, actual, tt.expected)
+			}
+		})
+	}
+}
