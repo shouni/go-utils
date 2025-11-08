@@ -25,8 +25,17 @@ func CleanStringFromEmojis(s string) string {
 	return s
 }
 
-// Truncate は、指定された文字列を最大長まで切り詰め、必要に応じてサフィックスを追加します。
+// Truncate は、指定された文字列を rune (文字) の数で最大長まで切り詰め、必要に応じてサフィックスを追加します。
+// maxLen が負の値の場合は、0として扱われます。
 func Truncate(s string, maxLen int, suffix string) string {
+	if maxLen <= 0 {
+		// maxLen が0以下の場合、入力文字列が空でなければサフィックスのみを返す
+		if s != "" {
+			return suffix
+		}
+		return s
+	}
+
 	// 1. 文字列を rune のスライスに変換 (マルチバイト対応)
 	runes := []rune(s)
 
@@ -36,7 +45,6 @@ func Truncate(s string, maxLen int, suffix string) string {
 	}
 
 	// 3. rune の数で切り詰める
-	// runes[:maxLen] は rune スライスであり、strings.TrimSpace を適用する前に文字列に戻す必要がある
 	truncatedRuneSlice := runes[:maxLen]
 
 	// 4. rune スライスを文字列に戻し、末尾スペースを削除

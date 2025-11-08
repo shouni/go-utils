@@ -84,6 +84,27 @@ func TestTruncate(t *testing.T) {
 		expected string
 	}{
 		{
+			name:     "クリティカル: maxLenが負の値 (-1)",
+			input:    "テストテキスト",
+			maxLen:   -1,
+			suffix:   "...",
+			expected: "...", // 負の値は0として扱われ、サフィックスのみが返される
+		},
+		{
+			name:     "クリティカル: maxLenがゼロ (0)",
+			input:    "テストテキスト",
+			maxLen:   0,
+			suffix:   "...",
+			expected: "...", // 0として扱われ、サフィックスのみが返される
+		},
+		{
+			name:     "クリティカル: maxLenがゼロ (0) かつ空文字列",
+			input:    "",
+			maxLen:   0,
+			suffix:   "...",
+			expected: "", // 入力が空の場合は、サフィックスも付加されない
+		},
+		{
 			name:     "最大長より短い文字列",
 			input:    "Hello",
 			maxLen:   10,
@@ -98,28 +119,25 @@ func TestTruncate(t *testing.T) {
 			expected: "HelloWorld",
 		},
 		{
-			name:   "最大長を超える文字列 (サフィックスあり)",
-			input:  "This is a long text.",
-			maxLen: 10, // 切り詰め位置がスペースの直後
-			suffix: "...",
-			// 期待値: "This is a " まで切り詰められ、TrimSpaceで末尾スペースが削除される -> "This is a" + "..."
+			name:     "最大長を超える文字列 (サフィックスあり)",
+			input:    "This is a long text.",
+			maxLen:   10,
+			suffix:   "...",
 			expected: "This is a...",
 		},
 		{
-			name:   "最大長を超える文字列 (サフィックスなし)",
-			input:  "This is a long text.",
-			maxLen: 10,
-			suffix: "",
-			// 期待値: "This is a " まで切り詰められ、TrimSpaceで末尾スペースが削除される -> "This is a" + ""
+			name:     "最大長を超える文字列 (サフィックスなし)",
+			input:    "This is a long text.",
+			maxLen:   10,
+			suffix:   "",
 			expected: "This is a",
 		},
 		{
-			name:   "切り詰めた末尾がスペースの場合",
-			input:  "ABCDEFGHI JKLM",
-			maxLen: 11, // "ABCDEFGHI J" (11文字) まで切り詰め
-			suffix: "...",
-			// 期待値: "ABCDEFGHI J" の末尾スペースは TrimSpace で削除されないため、この値が正しい動作。
-			expected: "ABCDEFGHI J...", // ★ 修正後の期待値
+			name:     "切り詰めた末尾がスペースの場合",
+			input:    "ABCDEFGHI JKLM",
+			maxLen:   11,
+			suffix:   "...",
+			expected: "ABCDEFGHI J...",
 		},
 		{
 			name:     "空文字列",
@@ -129,28 +147,25 @@ func TestTruncate(t *testing.T) {
 			expected: "",
 		},
 		{
-			name:   "マルチバイト文字を含む (rune長で切り詰め)",
-			input:  "あいうえお", // 5文字
-			maxLen: 3,       // 3文字目まで
-			suffix: "...",
-			// 期待値: "あいう" (3文字) + "..."
+			name:     "マルチバイト文字を含む (rune長で切り詰め)",
+			input:    "あいうえお",
+			maxLen:   3,
+			suffix:   "...",
 			expected: "あいう...",
 		},
 		{
-			name:   "マルチバイト文字を最大長より多く指定",
-			input:  "あいうえお", // 5文字
-			maxLen: 7,       // 5文字より多い
-			suffix: "...",
-			// 期待値: 切り詰めなし
+			name:     "マルチバイト文字を最大長より多く指定",
+			input:    "あいうえお",
+			maxLen:   7,
+			suffix:   "...",
 			expected: "あいうえお",
 		},
 		{
-			name:   "末尾に空白がある日本語",
-			input:  "テストテキスト　　です。 ",
-			maxLen: 6, // "テストテキス" (6文字) まで切り詰め
-			suffix: "...",
-			// 期待値: MaxLen=6 の場合、6文字目が 'ス' なので、"テストテキス..." が正しい。
-			expected: "テストテキス...", // ★ 修正後の期待値
+			name:     "末尾に空白がある日本語",
+			input:    "テストテキスト　　です。 ",
+			maxLen:   6,
+			suffix:   "...",
+			expected: "テストテキス...",
 		},
 	}
 
