@@ -13,10 +13,9 @@ import (
 var cleanURLRegex = regexp.MustCompile(`[^\w\-.]+`)
 
 // consecutiveHyphensRegex は連続するハイフンを検出するための正規表現です。
-// (修正案3: パフォーマンス向上のためグローバル変数としてコンパイル)
 var consecutiveHyphensRegex = regexp.MustCompile(`-+`)
 
-// baseRepoDirName はテンポラリディレクトリ内に作成されるリポジトリキャッシュディレクトリの基本名です。
+// baseRepoDirName はディレクトリの基本名です。
 const baseRepoDirName = "reviewer-repos"
 
 // SanitizeURLToUniquePath は、URL をサニタイズ（清浄化）して、一意なパス文字列を生成します。
@@ -34,10 +33,7 @@ func SanitizeURLToUniquePath(repoURL string) string {
 	name = cleanURLRegex.ReplaceAllString(name, "-")
 
 	// 3. 連続するハイフンを一つにまとめる
-	// (修正案3: グローバル変数を使用)
 	name = consecutiveHyphensRegex.ReplaceAllString(name, "-")
-
-	// (修正案2: strings.Trim の代わりに、意図が明確な TrimPrefix/Suffix を使用)
 	name = strings.TrimPrefix(name, "-")
 	name = strings.TrimSuffix(name, "-")
 
@@ -46,7 +42,6 @@ func SanitizeURLToUniquePath(repoURL string) string {
 	hasher.Write([]byte(repoURL))
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))[:8]
 
-	// (修正案4: nameが空の場合のフォールバックロジック)
 	// nameが空の場合はハッシュのみを使用し、"-<hash>" のような不正なパス名を防ぐ
 	var safeDirName string
 	if name != "" {
