@@ -10,7 +10,7 @@ import (
 )
 
 // cleanURLRegex はファイルシステムで使用できない文字を特定するための正規表現です。
-var cleanURLRegex = regexp.MustCompile(`[^\w\-.]+`)
+var cleanURLRegex = regexp.MustCompile(`[^\w\-]`)
 
 // consecutiveHyphensRegex は連続するハイフンを検出するための正規表現です。
 var consecutiveHyphensRegex = regexp.MustCompile(`-+`)
