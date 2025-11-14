@@ -1,4 +1,4 @@
-package path
+package urlpath
 
 import (
 	"crypto/sha256"
@@ -17,8 +17,7 @@ var cleanURLRegex = regexp.MustCompile(`[^\w\-.]+`)
 var consecutiveHyphensRegex = regexp.MustCompile(`-+`)
 
 // baseRepoDirName はテンポラリディレクトリ内に作成されるリポジトリキャッシュディレクトリの基本名です。
-// (修正案1: マジックストリングの定数化)
-const baseRepoDirName = "git-reviewer-repos"
+const baseRepoDirName = "reviewer-repos"
 
 // SanitizeURLToUniquePath は、URL をサニタイズ（清浄化）して、一意なパス文字列を生成します。
 func SanitizeURLToUniquePath(repoURL string) string {
