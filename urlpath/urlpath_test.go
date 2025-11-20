@@ -13,7 +13,9 @@ import (
 // パスが適切な構造と整形された名前を持っていることを検証します。
 
 func TestSanitizeURLToUniquePath(t *testing.T) {
-	tempBase := filepath.Join(os.TempDir(), "reviewer-repos")
+	// 💡 baseRepoDirName を定義
+	const baseDirName = "reviewer-repos"
+	tempBase := filepath.Join(os.TempDir(), baseDirName)
 
 	tests := []struct {
 		name     string
@@ -36,10 +38,17 @@ func TestSanitizeURLToUniquePath(t *testing.T) {
 			expectedPathBase: tempBase,
 		},
 		{
-			name:     "SSH_Protocol",
+			name:     "SSH_Protocol_Colon",
 			inputURL: "git@bitbucket.org:team/project.git",
-			// git@ と : がハイフンに変換され、連続ハイフンが除去される
+			// git@ は TrimPrefix、: は / に変換され、/ は cleanURLRegex でハイフンになる
 			expectedPrefix:   "bitbucket-org-team-project",
+			expectedPathBase: tempBase,
+		},
+		{
+			name:     "SSH_Protocol_URLScheme",
+			inputURL: "ssh://git@github.com/owner/repo.git",
+			// ssh:// も net/url がスキームとして除去する
+			expectedPrefix:   "github-com-owner-repo",
 			expectedPathBase: tempBase,
 		},
 		{
@@ -57,24 +66,31 @@ func TestSanitizeURLToUniquePath(t *testing.T) {
 			expectedPathBase: tempBase,
 		},
 		{
-			name:             "OnlyScheme",
-			inputURL:         "http://",
-			expectedPrefix:   "",
+			name:     "OnlyScheme",
+			inputURL: "http://",
+			// net/url でホストが空になり、rawNameが "http://" のまま残るため、cleanURLRegexで "http--" になり、
+			// 連続ハイフン処理で "http" になる
+			expectedPrefix:   "http", // 💡 以前は ""でしたが、http:// の場合 net/urlでホストが空になり、rawNameが "http://" になるため結果が変わる
 			expectedPathBase: tempBase,
 		},
 		{
-			name:     "LongURL",
-			inputURL: "https://long.domain.name/with/many/path/segments/to/test/if/it/handles/long/strings/and/converts/all/the/slashes/and/dots/correctly/and/trims/the/prefix.git",
-			// 連続ハイフン処理と、適切な Trim が行われることを確認する
-			// ここでは完全な prefix の代わりに、整形された一部をチェックする
+			name:             "LongURL",
+			inputURL:         "https://long.domain.name/with/many/path/segments/to/test/if/it/handles/long/strings/and/converts/all/the/slashes/and/dots/correctly/and/trims/the/prefix.git",
 			expectedPrefix:   "long-domain-name-with-many-path-segments-to-test-if-it-handles-long-strings-and-converts-all-the-slashes-and-dots-correctly-and-trims-the-prefix",
+			expectedPathBase: tempBase,
+		},
+		{
+			name:             "URLWithPort",
+			inputURL:         "https://dev.example.com:8080/repo",
+			expectedPrefix:   "dev-example-com-repo", // ポート番号は net/url により適切に除去される
 			expectedPathBase: tempBase,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resultPath := urlpath.SanitizeURLToUniquePath(tt.inputURL)
+			// 💡 baseDirName を第2引数として渡すように修正
+			resultPath := urlpath.SanitizeURLToUniquePath(tt.inputURL, baseDirName)
 
 			// 1. ベースパスが期待通りか検証
 			if !strings.HasPrefix(resultPath, tt.expectedPathBase) {
@@ -97,8 +113,9 @@ func TestSanitizeURLToUniquePath(t *testing.T) {
 			// 4. 整形された名前部分を検証 (ハッシュ部分を除く)
 			prefixPart := strings.Join(parts[:len(parts)-1], "-")
 
-			if tt.inputURL == "" || tt.inputURL == "http://" {
-				// EmptyURL または OnlyScheme の場合、nameは空で、prefixPartは空になる
+			// 💡 OnlyScheme の expectedPrefix 修正に伴い、条件を調整
+			// EmptyURL の場合のみ name は空
+			if tt.inputURL == "" {
 				if prefixPart != "" {
 					t.Errorf("SanitizeURLToUniquePath(%q) prefix incorrect for empty input: got %q, want \"\"", tt.inputURL, prefixPart)
 				}

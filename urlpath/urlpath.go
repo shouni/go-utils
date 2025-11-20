@@ -3,6 +3,7 @@ package urlpath
 import (
 	"crypto/sha256"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -25,9 +26,14 @@ func generateSafeUniqueName(repoURL string) string {
 	var rawName string
 
 	if err == nil && u.Host != "" {
-		// パースが成功した場合 (例: https://github.com/user/repo)
-		// ホスト名 + パス を取得
-		rawName = u.Host + u.Path
+		host, _, splitErr := net.SplitHostPort(u.Host)
+		if splitErr == nil {
+			// ポートが含まれていた場合
+			rawName = host + u.Path
+		} else {
+			// ポートが含まれていない場合、または SplitHostPort が失敗した場合
+			rawName = u.Host + u.Path
+		}
 	} else if strings.HasPrefix(repoURL, "git@") {
 		// パースが失敗するか、URLライブラリがうまく扱えないGitのSSH形式 (例: git@github.com:user/repo.git)
 		// 'git@' を取り除き、残りを rawName として使用
