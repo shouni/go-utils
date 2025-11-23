@@ -2,15 +2,15 @@ package timeutil
 
 import (
 	"fmt"
-	"log/slog" 
+	"log/slog"
 	"sync"
 	"time"
 )
 
 // JST の Location のキャッシュと、それを保護するための Mutex
 var (
-	jstLocation *time.Location
-	jstOnce     sync.Once
+	jstLocationCache *time.Location
+	jstOnce          sync.Once
 )
 
 const jstLocationName = "Asia/Tokyo"
@@ -29,15 +29,12 @@ func JSTLocation() *time.Location {
 				slog.String("fallback", "FixedZone (UTC+9)"),
 				slog.Any("error", err),
 			)
-
-			// Location のロードに失敗した場合、JST は UTC+9 の固定ゾーンであるため、
-			// 最終手段として time.FixedZone を使用する。
 			// FixedZone("JST", 9 * 60 * 60) は JST (UTC+9) を表す。
-			loc = time.FixedZone("JST", 9 * 60 * 60)
+			loc = time.FixedZone("JST", 9*60*60)
 		}
-		jstLocation = loc
+		jstLocationCache = loc
 	})
-	return jstLocation
+	return jstLocationCache
 }
 
 // NowJST は、日本標準時 (JST) における現在の時刻を返します。
@@ -53,15 +50,16 @@ func ToJST(t time.Time) time.Time {
 
 // FormatJST は、与えられた time.Time オブジェクトを JST に変換した後、指定されたレイアウトでフォーマットします。
 func FormatJST(t time.Time, layout string) string {
-    return ToJST(t).Format(layout)
+	return ToJST(t).Format(layout)
 }
 
 // FormatJSTString は、与えられた時刻文字列をJSTの time.Time にパースし、指定されたレイアウトでフォーマットします。
 // パースに失敗した場合は、空文字列とエラーを返します。
 func FormatJSTString(timeStr, parseLayout, formatLayout string) (string, error) {
-    t, err := time.Parse(parseLayout, timeStr)
-    if err != nil {
-       return "", fmt.Errorf("時刻文字列 '%s' のパースに失敗しました: %w", timeStr, err)
-    }
-    return FormatJST(t, formatLayout), nil
+	// タイムゾーン情報を含まない時刻文字列をJSTとして解釈させるため。
+	t, err := time.ParseInLocation(parseLayout, timeStr, JSTLocation())
+	if err != nil {
+		return "", fmt.Errorf("時刻文字列 '%s' のパースに失敗しました: %w", timeStr, err)
+	}
+	return FormatJST(t, formatLayout), nil
 }
