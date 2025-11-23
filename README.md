@@ -36,7 +36,7 @@ go get github.com/shouni/go-utils
 | パッケージ | 説明 | 主な提供機能 | 関連情報 |
 | :--- | :--- | :--- | :--- |
 | **`iohandler`** | **ファイルI/Oと標準入出力（stdin/stdout）を抽象化**します。CLIアプリケーションでの入出力処理を簡潔にします。 | ファイルまたは標準入力からのコンテンツの**読み込み** (`ReadInput`)、ファイルまたは標準出力へのコンテンツの**書き込み** (`WriteOutput`) | - |
-| **`urlpath`** | **URLをファイルシステムで安全なパスに変換**し、キャッシュディレクトリなどの**一意なパス生成**に使用します。 | URLのサニタイズ（清浄化）、一意なキャッシュパスの生成 (`SanitizeURLToUniquePath`) | **新規追加** |
+| **`urlpath`** | **URLをファイルシステムで安全なパスに変換**し、キャッシュディレクトリなどの**一意なパス生成**に使用します。 | URLのサニタイズ（清浄化）、一意なキャッシュパスの生成 (`SanitizeURLToUniquePath`, `GenerateGCSKeyName`) | **新規追加** |
 | **`timeutil`** | **日本標準時 (JST) の取得と変換**など、時刻とタイムゾーン処理を単純化します。 | JSTの現在時刻の取得 (`NowJST`)、任意の時刻をJSTへ変換 (`ToJST`) | **新規追加** |
 | **`retry`** | 外部サービス連携などで発生する**一時的なエラーに対応**するための、汎用的なリトライロジックを提供します。 | 指数バックオフ、カスタムエラー判定 (`Do` 関数) | `github.com/cenkalti/backoff/v4` を利用 |
 | **`text`** | テキストデータのクリーンアップと整形を行います。特に、**非互換な文字の除去**と**表示の切り詰め**に役立ちます。 | **絵文字の除去**と空白の正規化 (`CleanStringFromEmojis`)、**マルチバイト対応の文字列切り詰め** (`Truncate`) | `github.com/forPelevin/gomoji` を利用 |
@@ -47,4 +47,3 @@ go get github.com/shouni/go-utils
 ### 📜 ライセンス (License)
 
 このプロジェクトは [MIT License](https://opensource.org/licenses/MIT) の下で公開されています。
-
