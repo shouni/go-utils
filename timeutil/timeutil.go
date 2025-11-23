@@ -1,7 +1,8 @@
 package timeutil
 
 import (
-	"log/slog"
+	"fmt"
+	"log/slog" 
 	"sync"
 	"time"
 )
@@ -9,7 +10,7 @@ import (
 // JST の Location のキャッシュと、それを保護するための Mutex
 var (
 	jstLocation *time.Location
-	jstOnce     sync.Once
+	jstOnce     sync.Once
 )
 
 const jstLocationName = "Asia/Tokyo"
@@ -26,7 +27,7 @@ func JSTLocation() *time.Location {
 				"Failed to load location, falling back to FixedZone.",
 				slog.String("location", jstLocationName),
 				slog.String("fallback", "FixedZone (UTC+9)"),
-				slog.Any("error", err), // エラー詳細を構造化データとして記録
+				slog.Any("error", err),
 			)
 
 			// Location のロードに失敗した場合、JST は UTC+9 の固定ゾーンであるため、
@@ -52,7 +53,7 @@ func ToJST(t time.Time) time.Time {
 
 // FormatJST は、与えられた time.Time オブジェクトを JST に変換した後、指定されたレイアウトでフォーマットします。
 func FormatJST(t time.Time, layout string) string {
-    return ToJST(t).Format(layout)
+    return ToJST(t).Format(layout)
 }
 
 // FormatJSTString は、与えられた時刻文字列をJSTの time.Time にパースし、指定されたレイアウトでフォーマットします。
@@ -60,8 +61,6 @@ func FormatJST(t time.Time, layout string) string {
 func FormatJSTString(timeStr, parseLayout, formatLayout string) (string, error) {
     t, err := time.Parse(parseLayout, timeStr)
     if err != nil {
-       // このエラーはアプリケーションのロジックエラーであるため、ここでは slog ではなく fmt.Errorf を維持します
-       // 呼び出し元がこのエラーを適切に処理すべきです。
        return "", fmt.Errorf("時刻文字列 '%s' のパースに失敗しました: %w", timeStr, err)
     }
     return FormatJST(t, formatLayout), nil
