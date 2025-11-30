@@ -5,16 +5,19 @@ import "strings"
 // ParseCommaSeparatedList は、カンマ区切りの文字列を入力として受け取り、
 // 各要素の先頭と末尾の空白を除去（トリミング）した後、空でない要素のみを含む
 // クリーンな文字列スライスを返します。
-// 入力が空文字列の場合は nil を返します。
+// 入力が空文字列の場合は空のスライスを返します。
 func ParseCommaSeparatedList(s string) []string {
-	if s == "" {
-		return nil
-	}
+	// このifブロックは不要。後続のロジックで空文字列は自然に空スライスとして処理されるため削除する。
+	/*
+		if s == "" {
+			return nil
+		}
+	*/
 
 	// カンマで分割
 	parts := strings.Split(s, ",")
 
-	// 【修正点】初期キャパシティを確保することで、appendによる再確保を最小限に抑える
+	// 初期キャパシティを確保することで、appendによる再確保を最小限に抑える
 	// 最悪の場合 (全ての要素が有効な場合) に一度の割り当てで済むようにする
 	res := make([]string, 0, len(parts))
 
