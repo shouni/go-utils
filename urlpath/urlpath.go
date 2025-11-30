@@ -19,7 +19,7 @@ var cleanURLRegex = regexp.MustCompile(`[^\w\-]`)
 var consecutiveHyphensRegex = regexp.MustCompile(`-{2,}`)
 
 // IsSecureServiceURL は、提供されたServiceURLがHTTPSスキームを使用しているか、
-// またはローカル開発環境 (http://localhost, http://127.0.0.1) の例外に該当するかを判断します。
+// またはローカル開発環境 (http://localhost, http://127.0.0.1, http://[::1]) の例外に該当するかを判断します。
 // これは、WebアプリケーションでのクッキーのSecure属性設定などのセキュリティチェックに使用されます。
 func IsSecureServiceURL(serviceURL string) bool {
 	u, err := url.Parse(serviceURL)
@@ -36,7 +36,7 @@ func IsSecureServiceURL(serviceURL string) bool {
 		// ホスト名が完全に一致するかをチェック
 		// net/url.Parseは Hostname() を使ってポート番号を取り除いたホスト名を取得します。
 		hostname := u.Hostname()
-		return hostname == "localhost" || hostname == "127.0.0.1"
+		return hostname == "localhost" || hostname == "127.0.0.1" || hostname == "::1"
 	}
 
 	// その他のスキーム (ftp, file, etc.) は安全ではないと判断
