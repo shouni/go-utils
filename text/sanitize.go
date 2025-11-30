@@ -51,25 +51,3 @@ func Truncate(s string, maxLen int, suffix string) string {
 
 	return truncatedString + suffix
 }
-
-// ParseCommaSeparatedList は、カンマ区切りの文字列を入力として受け取り、
-// 各要素の先頭と末尾の空白を除去（トリミング）した後、空でない要素のみを含む
-// クリーンな文字列スライスを返します。
-// 入力が空文字列の場合は nil を返します。
-func ParseCommaSeparatedList(s string) []string {
-	if s == "" {
-		return nil
-	}
-
-	// カンマで分割
-	parts := strings.Split(s, ",")
-	var res []string
-
-	// 各要素をトリミングし、空でない要素のみを追加
-	for _, p := range parts {
-		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			res = append(res, trimmed)
-		}
-	}
-	return res
-}

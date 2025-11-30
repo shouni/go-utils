@@ -22,17 +22,43 @@ var consecutiveHyphensRegex = regexp.MustCompile(`-{2,}`)
 // またはローカル開発環境 (http://localhost, http://127.0.0.1) の例外に該当するかを判断します。
 // これは、WebアプリケーションでのクッキーのSecure属性設定などのセキュリティチェックに使用されます。
 func IsSecureServiceURL(serviceURL string) bool {
-	isSecure := strings.HasPrefix(serviceURL, "https://")
-	if !isSecure {
-		isLocalhost := strings.HasPrefix(serviceURL, "http://localhost") ||
-			strings.HasPrefix(serviceURL, "http://127.0.0.1")
-
-		if isLocalhost {
-			return true
-		}
+	u, err := url.Parse(serviceURL)
+	if err != nil {
+		// パースできないURLは安全ではないと判断
+		return false
 	}
 
-	return isSecure
+	if u.Scheme == "https" {
+		return true
+	}
+
+	if u.Scheme == "http" {
+		// ホスト名が完全に一致するかをチェック
+		// net/url.Parseは Hostname() を使ってポート番号を取り除いたホスト名を取得します。
+		hostname := u.Hostname()
+		return hostname == "localhost" || hostname == "127.0.0.1"
+	}
+
+	// その他のスキーム (ftp, file, etc.) は安全ではないと判断
+	return false
+}
+
+// GenerateGCSKeyName は、リポジトリURLからGCSオブジェクトキーの一部として
+// 使用するための、安全で一意なディレクトリ名（ローカルパスではない）を生成します。
+func GenerateGCSKeyName(repoURL string) string {
+	// ヘルパー関数を呼び出し、GCSキー名として必要なユニーク名のみを返す
+	return generateSafeUniqueName(repoURL)
+}
+
+// SanitizeURLToUniquePath は、URL をサニタイズ（清浄化）して、ローカルファイルシステム上の
+// 一意な一時ディレクトリのフルパスを生成します。
+func SanitizeURLToUniquePath(repoURL string, baseRepoDirName string) string {
+	// 1. ユニークな名前部分をヘルパー関数で生成
+	safeDirName := generateSafeUniqueName(repoURL)
+
+	// 2. OS互換のため filepath.Join を使用し、一時ディレクトリと結合して返す
+	tempBase := filepath.Join(os.TempDir(), baseRepoDirName)
+	return filepath.Join(tempBase, safeDirName)
 }
 
 // generateSafeUniqueName は、URLからサニタイズされた安全で一意なディレクトリ名またはGCSキー名を生成する、
@@ -87,22 +113,4 @@ func generateSafeUniqueName(repoURL string) string {
 	}
 
 	return safeDirName
-}
-
-// SanitizeURLToUniquePath は、URL をサニタイズ（清浄化）して、ローカルファイルシステム上の
-// 一意な一時ディレクトリのフルパスを生成します。
-func SanitizeURLToUniquePath(repoURL string, baseRepoDirName string) string {
-	// 1. ユニークな名前部分をヘルパー関数で生成
-	safeDirName := generateSafeUniqueName(repoURL)
-
-	// 2. OS互換のため filepath.Join を使用し、一時ディレクトリと結合して返す
-	tempBase := filepath.Join(os.TempDir(), baseRepoDirName)
-	return filepath.Join(tempBase, safeDirName)
-}
-
-// GenerateGCSKeyName は、リポジトリURLからGCSオブジェクトキーの一部として
-// 使用するための、安全で一意なディレクトリ名（ローカルパスではない）を生成します。
-func GenerateGCSKeyName(repoURL string) string {
-	// ヘルパー関数を呼び出し、GCSキー名として必要なユニーク名のみを返す
-	return generateSafeUniqueName(repoURL)
 }

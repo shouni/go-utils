@@ -2,23 +2,30 @@ package envutil
 
 import (
 	"os"
-	"strings"
+	"strconv"
 )
 
-// getEnv は環境変数を取得し、存在しない場合はデフォルト値を返します。
-func getEnv(key string, defaultValue string) string {
+// GetEnv は環境変数を取得し、存在しない場合はデフォルト値を返します。
+func GetEnv(key string, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}
 	return defaultValue
 }
 
-// getEnvAsBool は環境変数からbool値を読み込みます。
-// 環境変数が設定されていないか、"true" 以外の値の場合はdefaultValueを返します。
-func getEnvAsBool(key string, defaultValue bool) bool {
-	val := os.Getenv(key)
-	if val == "" {
+// GetEnvAsBool は環境変数からbool値を読み込みます。
+// 環境変数が未設定、またはブール値として解釈できない場合はdefaultValueを返します。
+func GetEnvAsBool(key string, defaultValue bool) bool {
+	// os.LookupEnv を使用し、値が存在するかどうかを明確にチェック
+	val, ok := os.LookupEnv(key)
+	if !ok {
+		return defaultValue // 環境変数が設定されていない場合
+	}
+
+	b, err := strconv.ParseBool(val)
+	if err != nil {
 		return defaultValue
 	}
-	return strings.ToLower(val) == "true"
+
+	return b
 }
