@@ -18,6 +18,23 @@ var cleanURLRegex = regexp.MustCompile(`[^\w\-]`)
 // consecutiveHyphensRegex は連続するハイフンを検出するための正規表現です。
 var consecutiveHyphensRegex = regexp.MustCompile(`-{2,}`)
 
+// IsSecureServiceURL は、提供されたServiceURLがHTTPSスキームを使用しているか、
+// またはローカル開発環境 (http://localhost, http://127.0.0.1) の例外に該当するかを判断します。
+// これは、WebアプリケーションでのクッキーのSecure属性設定などのセキュリティチェックに使用されます。
+func IsSecureServiceURL(serviceURL string) bool {
+	isSecure := strings.HasPrefix(serviceURL, "https://")
+	if !isSecure {
+		isLocalhost := strings.HasPrefix(serviceURL, "http://localhost") ||
+			strings.HasPrefix(serviceURL, "http://127.0.0.1")
+
+		if isLocalhost {
+			return true
+		}
+	}
+
+	return isSecure
+}
+
 // generateSafeUniqueName は、URLからサニタイズされた安全で一意なディレクトリ名またはGCSキー名を生成する、
 // プライベートなヘルパー関数です。
 func generateSafeUniqueName(repoURL string) string {
