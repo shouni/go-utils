@@ -7,13 +7,6 @@ import "strings"
 // クリーンな文字列スライスを返します。
 // 入力が空文字列の場合は空のスライスを返します。
 func ParseCommaSeparatedList(s string) []string {
-	// このifブロックは不要。後続のロジックで空文字列は自然に空スライスとして処理されるため削除する。
-	/*
-		if s == "" {
-			return nil
-		}
-	*/
-
 	// カンマで分割
 	parts := strings.Split(s, ",")
 
