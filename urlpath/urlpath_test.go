@@ -9,6 +9,137 @@ import (
 	"github.com/shouni/go-utils/urlpath"
 )
 
+// ----------------------------------------------------------------------
+// TestIsSecureServiceURL: セキュリティ検証関数のテスト
+// ----------------------------------------------------------------------
+
+func TestIsSecureServiceURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		inputURL string
+		want     bool
+	}{
+		{
+			name:     "HTTPS_Secure",
+			inputURL: "https://example.com/api",
+			want:     true,
+		},
+		{
+			name:     "HTTP_Insecure",
+			inputURL: "http://production.com/api",
+			want:     false,
+		},
+		{
+			name:     "HTTP_Localhost_Secure",
+			inputURL: "http://localhost:8080/api",
+			want:     true, // 許可されたローカル開発環境
+		},
+		{
+			name:     "HTTP_127001_Secure",
+			inputURL: "http://127.0.0.1/auth",
+			want:     true, // 許可されたローカル開発環境
+		},
+		{
+			name:     "HTTP_IPv6Local_Secure",
+			inputURL: "http://[::1]:3000",
+			want:     true, // 許可されたローカル開発環境
+		},
+		{
+			name:     "HTTP_WithCapitalHost_Secure",
+			inputURL: "http://LocalHost:8080/path",
+			want:     true, // ホスト名を小文字に変換してチェックされる
+		},
+		{
+			name:     "UnknownScheme_Insecure",
+			inputURL: "ftp://fileserver.net/data",
+			want:     false,
+		},
+		{
+			name:     "InvalidURL_Insecure",
+			inputURL: "::invalid-url",
+			want:     false, // パースエラーで false
+		},
+		{
+			name:     "EmptyURL_Insecure",
+			inputURL: "",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := urlpath.IsSecureServiceURL(tt.inputURL)
+			if got != tt.want {
+				t.Errorf("IsSecureServiceURL(%q) = %v, want %v", tt.inputURL, got, tt.want)
+			}
+		})
+	}
+}
+
+// ----------------------------------------------------------------------
+// TestGenerateGCSKeyName: GCSキー生成関数のテスト
+// ----------------------------------------------------------------------
+
+func TestGenerateGCSKeyName(t *testing.T) {
+	// GenerateGCSKeyNameは SanitizeURLToUniquePath の名前生成ロジックと同一
+	// (generateSafeUniqueName を呼び出す) のため、SanitizeURLToUniquePath のテストケースを再利用
+	tests := []struct {
+		name           string
+		inputURL       string
+		expectedPrefix string
+	}{
+		{
+			name:           "HTTP_Basic",
+			inputURL:       "https://github.com/owner/repo.git",
+			expectedPrefix: "github-com-owner-repo",
+		},
+		{
+			name:           "SSH_Protocol_Colon",
+			inputURL:       "git@bitbucket.org:team/project.git",
+			expectedPrefix: "bitbucket-org-team-project",
+		},
+		{
+			name:           "EmptyURL",
+			inputURL:       "",
+			expectedPrefix: "", // 名前部分は空になり、ハッシュのみになる
+		},
+		{
+			name:           "URLWithSpecialChars",
+			inputURL:       "https://test.com/project_name-with.dots-and_underscores",
+			expectedPrefix: "test-com-project_name-with-dots-and_underscores", // ドットはハイフンに、アンダースコアはそのまま
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := urlpath.GenerateGCSKeyName(tt.inputURL)
+
+			// 1. ハッシュ部分の検証 (長さとフォーマット)
+			parts := strings.Split(result, "-")
+			hashPart := parts[len(parts)-1]
+
+			if len(hashPart) != 8 {
+				t.Errorf("GenerateGCSKeyName(%q) hash length incorrect: got %d, want 8", tt.inputURL, len(hashPart))
+			}
+
+			// 2. 整形された名前部分を検証 (ハッシュ部分を除く)
+			prefixPart := strings.Join(parts[:len(parts)-1], "-")
+
+			if tt.inputURL == "" {
+				if prefixPart != "" {
+					t.Errorf("GenerateGCSKeyName(%q) prefix incorrect for empty input: got %q, want \"\"", tt.inputURL, prefixPart)
+				}
+			} else if prefixPart != tt.expectedPrefix {
+				t.Errorf("GenerateGCSKeyName(%q) prefix incorrect.\nGot:  %q\nWant: %q", tt.inputURL, prefixPart, tt.expectedPrefix)
+			}
+		})
+	}
+}
+
+// ----------------------------------------------------------------------
+// TestSanitizeURLToUniquePath: ローカルパス生成関数のテスト (ユーザー提供コード)
+// ----------------------------------------------------------------------
+
 // NOTE: このテストでは、ハッシュ部分の検証は行わず、
 // パスが適切な構造と整形された名前を持っていることを検証します。
 
@@ -70,7 +201,7 @@ func TestSanitizeURLToUniquePath(t *testing.T) {
 			inputURL: "http://",
 			// net/url でホストが空になり、rawNameが "http://" のまま残るため、cleanURLRegexで "http--" になり、
 			// 連続ハイフン処理で "http" になる
-			expectedPrefix:   "http", // 💡 以前は ""でしたが、http:// の場合 net/urlでホストが空になり、rawNameが "http://" になるため結果が変わる
+			expectedPrefix:   "http",
 			expectedPathBase: tempBase,
 		},
 		{
@@ -89,7 +220,7 @@ func TestSanitizeURLToUniquePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 💡 baseDirName を第2引数として渡すように修正
+			// baseDirName を第2引数として渡すように修正
 			resultPath := urlpath.SanitizeURLToUniquePath(tt.inputURL, baseDirName)
 
 			// 1. ベースパスが期待通りか検証
@@ -113,7 +244,7 @@ func TestSanitizeURLToUniquePath(t *testing.T) {
 			// 4. 整形された名前部分を検証 (ハッシュ部分を除く)
 			prefixPart := strings.Join(parts[:len(parts)-1], "-")
 
-			// 💡 OnlyScheme の expectedPrefix 修正に伴い、条件を調整
+			// OnlyScheme の expectedPrefix 修正に伴い、条件を調整
 			// EmptyURL の場合のみ name は空
 			if tt.inputURL == "" {
 				if prefixPart != "" {
