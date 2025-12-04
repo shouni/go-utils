@@ -3,6 +3,7 @@ package urlpath
 import (
 	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"os"
@@ -51,6 +52,28 @@ func IsSecureServiceURL(serviceURL string) bool {
 
 	// その他のスキーム (ftp, file, etc.) は安全ではないと判断
 	return false
+}
+
+// GetRepositoryPath はリポジトリURLから 'owner/repo-name' の形式のパスを抽出します。
+func GetRepositoryPath(repoURL string) string {
+	// SSH形式 (git@host:owner/repo.git) を net/url でパース可能な形式に変換
+	if strings.HasPrefix(repoURL, "git@") {
+		if idx := strings.Index(repoURL, ":"); idx != -1 {
+			repoURL = "ssh://" + repoURL[:idx] + "/" + repoURL[idx+1:] // ':' を '/' に置換
+		}
+	}
+
+	u, err := url.Parse(repoURL)
+	if err != nil {
+		slog.Warn("リポジトリURLのパースに失敗しました。元のURLをそのまま使用します。", "url", repoURL, "error", err)
+		return repoURL // パース失敗時は元のURLを返す
+	}
+
+	// パス部分から先頭の '/' と末尾の '.git' を除去
+	path := strings.TrimPrefix(u.Path, "/")
+	path = strings.TrimSuffix(path, ".git")
+
+	return path
 }
 
 // GenerateGCSKeyName は、リポジトリURLからGCSオブジェクトキーの一部として
