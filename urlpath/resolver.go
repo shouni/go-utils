@@ -28,12 +28,12 @@ func ResolveOutputPath(baseDir, fileName string) (string, error) {
 	if IsRemoteURI(baseDir) {
 		u, err := url.Parse(baseDir)
 		if err != nil {
-			return "", fmt.Errorf("無効なGCS URIです: %w", err)
+			return "", fmt.Errorf("無効なリモートストレージURIです: %w", err)
 		}
 
 		u.Path, err = url.JoinPath(u.Path, fileName)
 		if err != nil {
-			return "", fmt.Errorf("GCSパスの結合に失敗しました: %w", err)
+			return "", fmt.Errorf("リモートストレージパスの結合に失敗しました: %w", err)
 		}
 		return u.String(), nil
 	}
