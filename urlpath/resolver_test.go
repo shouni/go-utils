@@ -1,6 +1,7 @@
 package urlpath
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -37,7 +38,8 @@ func TestResolveOutputPath(t *testing.T) {
 	}{
 		{"GCS successful join", "gs://bucket/dir", "image.png", "gs://bucket/dir/image.png", false},
 		{"S3 successful join", "s3://bucket/dir", "data.json", "s3://bucket/dir/data.json", false},
-		{"Local successful join", "/tmp", "test.txt", "/tmp/test.txt", false},
+		// filepath.Join を使用してプラットフォーム非依存にする
+		{"Local successful join", "/tmp", "test.txt", filepath.Join("/tmp", "test.txt"), false},
 		{"GCS with trailing slash", "gs://bucket/dir/", "image.png", "gs://bucket/dir/image.png", false},
 		{"Invalid GCS URI", "gs://%%invalid", "file.txt", "", true},
 	}
@@ -64,8 +66,9 @@ func TestResolveBaseURL(t *testing.T) {
 	}{
 		{"GCS file", "gs://bucket/images/char.png", "gs://bucket/images/"},
 		{"HTTPS URL", "https://example.com/assets/logo.svg", "https://example.com/assets/"},
-		{"Local absolute path", "/home/user/data.txt", "/home/user/"},
-		{"Local relative path", "dir/file.png", "dir/"},
+		// ローカルパスの期待値も環境に合わせて構築
+		{"Local absolute path", "/home/user/data.txt", "/home/user" + string(filepath.Separator)},
+		{"Local relative path", "dir/file.png", "dir" + string(filepath.Separator)},
 		{"Current directory", "file.txt", "./"},
 		{"Empty string", "", ""},
 	}

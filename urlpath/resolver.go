@@ -78,7 +78,7 @@ func ResolveBaseURL(rawPath string) string {
 // 例: "path/to/image.png", 1 -> "path/to/image_1.png"
 func GenerateIndexedPath(basePath string, index int) (string, error) {
 	if index <= 0 {
-		return "", fmt.Errorf("index must be a positive integer, but got %d", index)
+		return "", fmt.Errorf("インデックスは正の整数である必要がありますが、%d が指定されました", index)
 	}
 	ext := filepath.Ext(basePath)
 	base := strings.TrimSuffix(basePath, ext)
