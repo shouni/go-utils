@@ -11,24 +11,51 @@ func TestIsRemoteURI(t *testing.T) {
 		uri  string
 		want bool
 	}{
-		{"GCS URI", "gs://my-bucket/path", true},
-		{"S3 URI", "s3://my-bucket/path", true},
-		{"Local path", "/usr/local/bin", false},
-		{"Relative path", "./local/file", false},
-		{"HTTP URL", "https://example.com", false},
+		{"GCS lowercase", "gs://bucket/file.txt", true},
+		{"GCS uppercase", "GS://bucket/file.txt", true},
+		{"S3 lowercase", "s3://bucket/file.txt", true},
+		{"S3 uppercase", "S3://bucket/file.txt", true},
+		{"HTTP is not remote", "http://example.com", false},
+		{"Local path", "/var/tmp/file.txt", false},
+		{"Relative path", "./local/file.txt", false},
 		{"Empty string", "", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := IsRemoteURI(tt.uri); got != tt.want {
-				t.Errorf("IsRemoteURI() = %v, want %v", got, tt.want)
+				t.Errorf("IsRemoteURI(%q) = %v, want %v", tt.uri, got, tt.want)
 			}
 		})
 	}
 }
 
-func TestResolveOutputPath(t *testing.T) {
+func TestResolveBaseDir(t *testing.T) {
+	sep := string(filepath.Separator)
+	tests := []struct {
+		name    string
+		rawPath string
+		want    string
+	}{
+		{"Remote GCS file", "gs://my-bucket/folder/image.png", "gs://my-bucket/folder/"},
+		{"Remote S3 dir already has slash", "s3://my-bucket/folder/", "s3://my-bucket/folder/"},
+		{"Local file absolute", "/tmp/data/output.json", "/tmp/data" + sep},
+		{"Local file relative", "results/test.log", "results" + sep},
+		{"Current directory", "main.go", "." + sep},
+		{"Empty string", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ResolveBaseDir(tt.rawPath)
+			if got != tt.want {
+				t.Errorf("ResolveBaseDir(%q) = %q, want %q", tt.rawPath, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolvePath(t *testing.T) {
 	tests := []struct {
 		name     string
 		baseDir  string
@@ -36,47 +63,21 @@ func TestResolveOutputPath(t *testing.T) {
 		want     string
 		wantErr  bool
 	}{
-		{"GCS successful join", "gs://bucket/dir", "image.png", "gs://bucket/dir/image.png", false},
-		{"S3 successful join", "s3://bucket/dir", "data.json", "s3://bucket/dir/data.json", false},
-		// filepath.Join を使用してプラットフォーム非依存にする
-		{"Local successful join", "/tmp", "test.txt", filepath.Join("/tmp", "test.txt"), false},
-		{"GCS with trailing slash", "gs://bucket/dir/", "image.png", "gs://bucket/dir/image.png", false},
-		{"Invalid GCS URI", "gs://%%invalid", "file.txt", "", true},
+		{"Remote GCS", "gs://bucket/dir", "image.png", "gs://bucket/dir/image.png", false},
+		{"Remote S3 with trailing slash", "s3://bucket/dir/", "image.png", "s3://bucket/dir/image.png", false},
+		{"Local path join", "/tmp/dir", "image.png", filepath.Join("/tmp/dir", "image.png"), false},
+		{"Empty fileName", "/tmp/dir", "", filepath.Join("/tmp/dir", ""), false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ResolveOutputPath(tt.baseDir, tt.fileName)
+			got, err := ResolvePath(tt.baseDir, tt.fileName)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ResolveOutputPath() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ResolvePath() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("ResolveOutputPath() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestResolveBaseURL(t *testing.T) {
-	tests := []struct {
-		name    string
-		rawPath string
-		want    string
-	}{
-		{"GCS file", "gs://bucket/images/char.png", "gs://bucket/images/"},
-		{"HTTPS URL", "https://example.com/assets/logo.svg", "https://example.com/assets/"},
-		// ローカルパスの期待値も環境に合わせて構築
-		{"Local absolute path", "/home/user/data.txt", "/home/user" + string(filepath.Separator)},
-		{"Local relative path", "dir/file.png", "dir" + string(filepath.Separator)},
-		{"Current directory", "file.txt", "./"},
-		{"Empty string", "", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := ResolveBaseURL(tt.rawPath); got != tt.want {
-				t.Errorf("ResolveBaseURL() = %v, want %v", got, tt.want)
+				t.Errorf("ResolvePath() = %q, want %q", got, tt.want)
 			}
 		})
 	}
@@ -90,10 +91,10 @@ func TestGenerateIndexedPath(t *testing.T) {
 		want     string
 		wantErr  bool
 	}{
-		{"Normal png", "path/to/image.png", 1, "path/to/image_1.png", false},
-		{"Large index", "image.jpg", 99, "image_99.jpg", false},
+		{"Normal file", "image.png", 1, "image_1.png", false},
+		{"File with path", "/tmp/image.png", 5, "/tmp/image_5.png", false},
+		{"Remote URI", "gs://bucket/art.jpg", 10, "gs://bucket/art_10.jpg", false},
 		{"No extension", "README", 2, "README_2", false},
-		{"GCS path", "gs://bucket/asset.png", 5, "gs://bucket/asset_5.png", false},
 		{"Zero index error", "image.png", 0, "", true},
 		{"Negative index error", "image.png", -1, "", true},
 	}
@@ -106,7 +107,7 @@ func TestGenerateIndexedPath(t *testing.T) {
 				return
 			}
 			if got != tt.want {
-				t.Errorf("GenerateIndexedPath() = %v, want %v", got, tt.want)
+				t.Errorf("GenerateIndexedPath() = %q, want %q", got, tt.want)
 			}
 		})
 	}

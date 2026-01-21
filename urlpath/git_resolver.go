@@ -12,12 +12,13 @@ import (
 	"strings"
 )
 
-// cleanURLRegex はファイルシステムやGCSで使用できない文字を特定するための正規表現です。
-// \w (単語文字 [a-zA-Z0-9_]) と - (ハイフン) 以外を全てマッチさせます。
-var cleanURLRegex = regexp.MustCompile(`[^\w\-]`)
-
-// consecutiveHyphensRegex は連続するハイフンを検出するための正規表現です。
-var consecutiveHyphensRegex = regexp.MustCompile(`-{2,}`)
+var (
+	// cleanURLRegex はファイルシステムやGCSで使用できない文字を特定するための正規表現です。
+	// \w (単語文字 [a-zA-Z0-9_]) と - (ハイフン) 以外を全てマッチさせます。
+	cleanURLRegex = regexp.MustCompile(`[^\w\-]`)
+	// consecutiveHyphensRegex は連続するハイフンを検出するための正規表現です。
+	consecutiveHyphensRegex = regexp.MustCompile(`-{2,}`)
+)
 
 // GetRepositoryPath はリポジトリURLから 'owner/repo-name' の形式のパスを抽出します。
 func GetRepositoryPath(repoURL string) string {

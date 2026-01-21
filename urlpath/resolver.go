@@ -7,80 +7,84 @@ import (
 	"strings"
 )
 
-// IsGCSURI は、URIが Google Cloud Storage (gs://) を指しているかどうかをチェックします。
-func IsGCSURI(uri string) bool {
-	return strings.HasPrefix(uri, "gs://")
-}
-
-// IsS3URI は、指定されたURIがS3 URI ("s3://...") であるかどうかをチェックします。
-func IsS3URI(uri string) bool {
-	return strings.HasPrefix(uri, "s3://")
-}
+// URIスキームの定義
+const (
+	SchemeGCS = "gs://"
+	SchemeS3  = "s3://"
+)
 
 // IsRemoteURI は、指定されたURIがクラウドストレージ（GCSまたはS3）を指しているか判定します。
 func IsRemoteURI(uri string) bool {
 	return IsGCSURI(uri) || IsS3URI(uri)
 }
 
-// ResolveOutputPath は、ベースとなるディレクトリパスとファイル名から、
-// クラウド/ローカルを考慮した最終的な出力パスを生成します。
-func ResolveOutputPath(baseDir, fileName string) (string, error) {
-	if IsRemoteURI(baseDir) {
-		u, err := url.Parse(baseDir)
-		if err != nil {
-			return "", fmt.Errorf("無効なリモートストレージURIです: %w", err)
-		}
-
-		u.Path, err = url.JoinPath(u.Path, fileName)
-		if err != nil {
-			return "", fmt.Errorf("リモートストレージパスの結合に失敗しました: %w", err)
-		}
-		return u.String(), nil
-	}
-	return filepath.Join(baseDir, fileName), nil
+// IsGCSURI は、URIが Google Cloud Storage (gs://) を指しているか判定します。
+func IsGCSURI(uri string) bool {
+	return strings.HasPrefix(strings.ToLower(uri), SchemeGCS)
 }
 
-// ResolveBaseURL は、入力パス（URLまたはローカルパス）から
-// 親ディレクトリのパスを解決し、末尾がセパレータで終わるように正規化します。
-func ResolveBaseURL(rawPath string) string {
+// IsS3URI は、URIが S3 (s3://) を指しているか判定します。
+func IsS3URI(uri string) bool {
+	return strings.HasPrefix(strings.ToLower(uri), SchemeS3)
+}
+
+// ResolveBaseDir は、入力パスから親ディレクトリのパスを抽出し、
+// 末尾がセパレータ（URLなら /、ローカルならOS依存）で終わるように正規化します。
+func ResolveBaseDir(rawPath string) string {
 	if rawPath == "" {
 		return ""
 	}
 
 	u, err := url.Parse(rawPath)
-	if err == nil && u.IsAbs() {
-		// URL形式の場合、"." への参照を解決することで親ディレクトリのURLを取得
-		dotRef, _ := url.Parse(".")
-		baseURL := u.ResolveReference(dotRef).String()
-
-		// ディレクトリパスであることを保証するため、末尾に "/" を追加
+	// スキームがある場合はURLとして処理
+	if err == nil && u.Scheme != "" {
+		// ディレクトリ構造を取得するためにパスの末尾を調整
+		if !strings.HasSuffix(u.Path, "/") {
+			u.Path = filepath.Dir(u.Path)
+		}
+		baseURL := u.String()
 		if !strings.HasSuffix(baseURL, "/") {
 			baseURL += "/"
 		}
 		return baseURL
 	}
 
-	// URLスキームがない場合はローカルファイルパスとして扱う
+	// ローカルファイルパスとして処理
 	baseDir := filepath.Dir(rawPath)
 	if baseDir == "." {
-		return "./"
+		return "." + string(filepath.Separator)
 	}
 
 	if !strings.HasSuffix(baseDir, string(filepath.Separator)) {
 		baseDir += string(filepath.Separator)
 	}
-
 	return baseDir
 }
 
-// GenerateIndexedPath は、指定されたベースパスの拡張子の前に連番を挿入し、
-// 新しいパス文字列を生成します。index は1以上の整数である必要があります。
+// ResolvePath は、ベースディレクトリとファイル名を結合します。
+// リモートURIの場合はURLとして、それ以外はローカルパスとして結合します。
+func ResolvePath(baseDir, fileName string) (string, error) {
+	if IsRemoteURI(baseDir) {
+		result, err := url.JoinPath(baseDir, fileName)
+		if err != nil {
+			return "", fmt.Errorf("リモートストレージパスの結合に失敗: %w", err)
+		}
+		return result, nil
+	}
+
+	return filepath.Join(baseDir, fileName), nil
+}
+
+// GenerateIndexedPath は、指定されたパスの拡張子の前に連番を挿入します。
 // 例: "path/to/image.png", 1 -> "path/to/image_1.png"
 func GenerateIndexedPath(basePath string, index int) (string, error) {
 	if index <= 0 {
-		return "", fmt.Errorf("インデックスは正の整数である必要がありますが、%d が指定されました", index)
+		return "", fmt.Errorf("インデックスは1以上の整数である必要があります: %d", index)
 	}
+
+	// URLの場合はPath部分のみ、ローカルなら全体から拡張子を取得
 	ext := filepath.Ext(basePath)
-	base := strings.TrimSuffix(basePath, ext)
-	return fmt.Sprintf("%s_%d%s", base, index, ext), nil
+	mainPath := strings.TrimSuffix(basePath, ext)
+
+	return fmt.Sprintf("%s_%d%s", mainPath, index, ext), nil
 }
