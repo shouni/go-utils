@@ -90,10 +90,15 @@ func Do(ctx context.Context, cfg Config, operationName string, op Operation, sho
 		return nil
 	}
 
-	// 永続的エラー(= shouldRetryFn で止めた)
+	// 永続的エラー(= shouldRetryFn で止めた、または backoff.Permanent でラップされた)
 	var pErr *backoff.PermanentError
 	if errors.As(err, &pErr) {
-		return fmt.Errorf("%sに失敗しました: 致命的なエラーのため中止: %w", operationName, pErr.Err)
+		// pErr.Err が nil の場合に備え、lastErr をフォールバックとして使用します
+		finalErr := pErr.Err
+		if finalErr == nil {
+			finalErr = lastErr
+		}
+		return fmt.Errorf("%sに失敗しました: 致命的なエラーのため中止: %w", operationName, finalErr)
 	}
 
 	// コンテキストのキャンセルまたはタイムアウト
@@ -102,5 +107,6 @@ func Do(ctx context.Context, cfg Config, operationName string, op Operation, sho
 	}
 
 	// 最大リトライ回数到達
+	// 最終的なエラー（err）をラップして返します。backoff.Retry は最後の試行のエラーを返します。
 	return fmt.Errorf("%sに失敗しました: 最大リトライ回数 (%d回) を超えました。最終エラー: %w", operationName, cfg.MaxRetries, err)
 }
