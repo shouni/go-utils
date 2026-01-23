@@ -93,11 +93,7 @@ func Do(ctx context.Context, cfg Config, operationName string, op Operation, sho
 	// 永続的エラー(= shouldRetryFn で止めた)
 	var pErr *backoff.PermanentError
 	if errors.As(err, &pErr) {
-		finalErr := lastErr
-		if pErr != nil && pErr.Err != nil {
-			finalErr = pErr.Err
-		}
-		return fmt.Errorf("%sに失敗しました: 致命的なエラーのため中止: %w", operationName, finalErr)
+		return fmt.Errorf("%sに失敗しました: 致命的なエラーのため中止: %w", operationName, pErr.Err)
 	}
 
 	// コンテキストのキャンセルまたはタイムアウト

@@ -84,29 +84,29 @@ func NewSafeHTTPClient(timeout time.Duration) *http.Client {
 		KeepAlive: 30 * time.Second,
 	}
 
-	transport := &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			host, _, err := net.SplitHostPort(addr)
-			if err != nil {
-				host = addr
-			}
+	// http.DefaultTransport の設定をコピーしてカスタマイズする
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			host = addr
+		}
 
-			// 接続直前に名前解決を行い、解決されたIPを即座にチェックする (TOCTOU対策)
-			ips, err := net.LookupIP(host)
-			if err != nil {
-				return nil, err
-			}
+		// 接続直前に名前解決を行い、解決されたIPを即座にチェックする (TOCTOU対策)
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return nil, err
+		}
 
-			for _, ip := range ips {
-				if isRestrictedIP(ip) {
-					return nil, fmt.Errorf("restricted IP detected: %s", ip.String())
-				}
+		for _, ip := range ips {
+			if isRestrictedIP(ip) {
+				return nil, fmt.Errorf("restricted IP detected: %s", ip.String())
 			}
+		}
 
-			return dialer.DialContext(ctx, network, addr)
-		},
-		Proxy: http.ProxyFromEnvironment,
+		return dialer.DialContext(ctx, network, addr)
 	}
+	// ProxyFromEnvironmentはClone()で引き継がれるため、明示的な設定は不要な場合が多い
 
 	return &http.Client{
 		Transport: transport,
