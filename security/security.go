@@ -45,8 +45,9 @@ func IsSecureServiceURL(serviceURL string) bool {
 	}
 }
 
-// IsSafeURL はURLの形式を検証します。
-// DNS Rebinding対策のため、実際のリクエストには NewSafeHTTPClient を使用してください。
+// IsSafeURL は、SSRF (Server-Side Request Forgery) 攻撃を防ぐため、URLの静的検証を行います。
+// スキームが許可されているか、ホスト名がプライベートIPに解決されないかを確認します。
+// 動的なDNS Rebinding攻撃への対策として、実際のリクエスト発行時にはこの関数と合わせて NewSafeHTTPClient の使用を強く推奨します。
 func IsSafeURL(rawURL string) (bool, error) {
 	parsedURL, err := url.ParseRequestURI(rawURL)
 	if err != nil {
@@ -137,7 +138,7 @@ func validateHostnameIPs(hostname string) error {
 	return nil
 }
 
-// isRestrictedIP は、指定された IP アドレスがプライベート IP アドレスかループバック アドレスかをチェックします
+// isRestrictedIP は、指定されたIPアドレスがプライベート、ループバック、またはリンクローカルアドレスであるかを判定します。
 func isRestrictedIP(ip net.IP) bool {
 	return ip.IsPrivate() ||
 		ip.IsLoopback() ||

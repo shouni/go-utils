@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shouni/go-utils/security"
+	"github.com/stretchr/testify/require"
 )
 
 // ----------------------------------------------------------------------
@@ -285,10 +286,11 @@ func TestNewSafeHTTPClient(t *testing.T) {
 		}
 
 		_, err = client.Do(req)
-		// loopback なので制限される想定
-		if err == nil {
-			t.Log("Note: httptest server uses loopback, so this may fail in real scenarios")
-		}
+
+		// httptest.NewServer はループバックアドレス (例: 127.0.0.1) でリッスンするため、
+		// NewSafeHTTPClient はこれを制限されたIPとして検出し、接続をブロックすることが期待される。
+		require.Error(t, err, "Expected an error because httptest server runs on a loopback address")
+		require.Contains(t, err.Error(), "restricted IP detected", "Error message should indicate a restricted IP")
 	})
 
 	t.Run("ContextTimeout", func(t *testing.T) {
