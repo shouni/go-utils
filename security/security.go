@@ -17,6 +17,7 @@ const (
 	SchemeS3    = "s3"
 )
 
+// localdevHostnames は、ローカル開発環境で一般的に使用されるホスト名のセットです。
 var localdevHostnames = map[string]struct{}{
 	"localhost":            {},
 	"127.0.0.1":            {},
@@ -24,6 +25,7 @@ var localdevHostnames = map[string]struct{}{
 	"host.docker.internal": {},
 }
 
+// IsSecureServiceURL は、提供されたサービス URL が安全なスキームを使用しているか、ローカル開発ホスト名と一致しているかを確認します。
 func IsSecureServiceURL(serviceURL string) bool {
 	u, err := url.Parse(serviceURL)
 	if err != nil {
@@ -111,6 +113,7 @@ func NewSafeHTTPClient(timeout time.Duration) *http.Client {
 	}
 }
 
+// isLocalDevHostname は、指定されたホスト名が既知のローカル開発ホスト名と一致するかどうかを確認します。
 func isLocalDevHostname(hostname string) bool {
 	if hostname == "" {
 		return false
@@ -119,6 +122,7 @@ func isLocalDevHostname(hostname string) bool {
 	return ok
 }
 
+// validateHostnameIPs は、指定されたホスト名が制限された IP アドレスに解決されるかどうかを確認します。
 func validateHostnameIPs(hostname string) error {
 	ips, err := net.LookupIP(hostname)
 	if err != nil {
@@ -133,6 +137,7 @@ func validateHostnameIPs(hostname string) error {
 	return nil
 }
 
+// isRestrictedIP は、指定された IP アドレスがプライベート IP アドレスかループバック アドレスかをチェックします
 func isRestrictedIP(ip net.IP) bool {
 	return ip.IsPrivate() ||
 		ip.IsLoopback() ||
