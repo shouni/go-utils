@@ -54,13 +54,9 @@ func (c Config) withDefaults() Config {
 
 // newBackOffPolicy は設定とコンテキストから backoff.BackOff を生成します。
 func newBackOffPolicy(ctx context.Context, cfg Config) backoff.BackOff {
-	cfg = cfg.withDefaults()
-
 	b := backoff.NewExponentialBackOff()
 	b.InitialInterval = cfg.InitialInterval
 	b.MaxInterval = cfg.MaxInterval
-	// 指数増加の倍率(デフォルト1.5)や、ランダムな揺らぎ(Jitter: デフォルト0.5)を
-	// 調整したい場合はここで設定可能です。
 
 	// 最大リトライ回数を制限
 	bo := backoff.WithMaxRetries(b, cfg.MaxRetries)
