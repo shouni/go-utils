@@ -30,14 +30,14 @@ func GetEnvAsBool(key string, defaultValue bool) bool {
 	return b
 }
 
-// GetEnvAsInt は環境変数を整数として取得し、存在しないか変換に失敗した場合はデフォルト値を返すのだ。
+// GetEnvAsInt は環境変数を整数として取得し、存在しないか変換に失敗した場合はデフォルト値を返します。
 func GetEnvAsInt(key string, defaultValue int) int {
 	if value, exists := os.LookupEnv(key); exists {
-		// 文字列を整数（10進数）に変換を試みるのだ
+		// 文字列から整数（10進数）への変換を試みる
 		if i, err := strconv.Atoi(value); err == nil {
 			return i
 		}
-		// 変換に失敗した場合は、安全のためにデフォルト値を返すのが鉄則なのだよ
+		// 変換に失敗した場合はデフォルト値を返す
 	}
 	return defaultValue
 }

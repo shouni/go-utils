@@ -23,8 +23,6 @@ func TestGetEnv(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setEnv {
 				t.Setenv(tt.key, tt.envValue)
-			} else {
-				os.Unsetenv(tt.key)
 			}
 			if got := GetEnv(tt.key, defaultValue); got != tt.want {
 				t.Errorf("GetEnv(%q) = %v, want %v", tt.key, got, tt.want)
