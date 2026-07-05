@@ -1,3 +1,5 @@
+// Package timeutil は、日本標準時 (JST) への変換やフォーマットなど、
+// 時刻処理を単純化するユーティリティ関数を提供します。
 package timeutil
 
 import (
@@ -20,21 +22,27 @@ const jstLocationName = "Asia/Tokyo"
 func JSTLocation() *time.Location {
 	// sync.Once を使用して、初期化処理をスレッドセーフかつ一度だけ実行することを保証
 	jstOnce.Do(func() {
-		loc, err := time.LoadLocation(jstLocationName)
-		if err != nil {
-			// 警告を slog.Warn で構造化出力
-			slog.Warn(
-				"Failed to load location, falling back to FixedZone.",
-				slog.String("location", jstLocationName),
-				slog.String("fallback", "FixedZone (UTC+9)"),
-				slog.Any("error", err),
-			)
-			// FixedZone("JST", 9 * 60 * 60) は JST (UTC+9) を表す。
-			loc = time.FixedZone("JST", 9*60*60)
-		}
-		jstLocationCache = loc
+		jstLocationCache = loadLocationOrFallback(jstLocationName)
 	})
 	return jstLocationCache
+}
+
+// loadLocationOrFallback は、指定された IANA タイムゾーン名の Location をロードします。
+// ロードに失敗した場合は警告ログを出力し、UTC+9 の FixedZone にフォールバックします。
+func loadLocationOrFallback(name string) *time.Location {
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		// 警告を slog.Warn で構造化出力
+		slog.Warn(
+			"Failed to load location, falling back to FixedZone.",
+			slog.String("location", name),
+			slog.String("fallback", "FixedZone (UTC+9)"),
+			slog.Any("error", err),
+		)
+		// FixedZone("JST", 9 * 60 * 60) は JST (UTC+9) を表す。
+		return time.FixedZone("JST", 9*60*60)
+	}
+	return loc
 }
 
 // NowJST は、日本標準時 (JST) における現在の時刻を返します。

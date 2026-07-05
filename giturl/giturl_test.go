@@ -1,4 +1,4 @@
-package urlpath_test
+package giturl_test
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shouni/go-utils/urlpath"
+	"github.com/shouni/go-utils/giturl"
 )
 
 // ----------------------------------------------------------------------
@@ -68,7 +68,7 @@ func TestGetRepositoryPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := urlpath.GetRepositoryPath(tt.inputURL)
+			got := giturl.GetRepositoryPath(tt.inputURL)
 			if got != tt.want {
 				t.Errorf("GetRepositoryPath(%q) = %q, want %q", tt.inputURL, got, tt.want)
 			}
@@ -112,7 +112,7 @@ func TestGenerateGCSKeyName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := urlpath.GenerateGCSKeyName(tt.inputURL)
+			result := giturl.GenerateGCSKeyName(tt.inputURL)
 
 			// 1. ハッシュ部分の検証 (長さとフォーマット)
 			parts := strings.Split(result, "-")
@@ -221,7 +221,7 @@ func TestSanitizeURLToUniquePath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// baseDirName を第2引数として渡すように修正
-			resultPath := urlpath.SanitizeURLToUniquePath(tt.inputURL, baseDirName)
+			resultPath := giturl.SanitizeURLToUniquePath(tt.inputURL, baseDirName)
 
 			// 1. ベースパスが期待通りか検証
 			if !strings.HasPrefix(resultPath, tt.expectedPathBase) {

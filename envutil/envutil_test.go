@@ -53,7 +53,7 @@ func TestGetEnvAsBool(t *testing.T) {
 			if tt.setEnv {
 				t.Setenv(tt.key, tt.envValue)
 			} else {
-				os.Unsetenv(tt.key)
+				_ = os.Unsetenv(tt.key)
 			}
 			if got := GetEnvAsBool(tt.key, tt.defaultValue); got != tt.want {
 				t.Errorf("GetEnvAsBool(%q) = %v, want %v", tt.key, got, tt.want)
@@ -82,7 +82,7 @@ func TestGetEnvAsInt(t *testing.T) {
 			if tt.setEnv {
 				t.Setenv(tt.key, tt.envValue)
 			} else {
-				os.Unsetenv(tt.key)
+				_ = os.Unsetenv(tt.key)
 			}
 			if got := GetEnvAsInt(tt.key, tt.defaultValue); got != tt.want {
 				t.Errorf("GetEnvAsInt(%q) = %v, want %v", tt.key, got, tt.want)
