@@ -1,3 +1,4 @@
+// Package envutil は、環境変数の取得と型変換を安全に行うヘルパー関数を提供します。
 package envutil
 
 import (

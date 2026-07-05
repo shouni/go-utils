@@ -34,9 +34,10 @@ go get github.com/shouni/go-utils
 
 | パッケージ | 説明 | 主な提供機能 | 関連情報 |
 | --- | --- | --- | --- |
-| **`urlpath`** | **URLやリモートURI（GCS/S3）の解決**を行い、クラウドとローカルを透過的に扱います。 | クラウドURI判定 (`IsRemoteURI`)、パスの結合 (`ResolvePath`)、ディレクトリ解決 (`ResolveBaseDir`)、連番付与 (`GenerateIndexedFiles`) | **リファクタ済** |
+| **`urlpath`** | **URLやリモートURI（GCS/S3）の解決**を行い、クラウドとローカルを透過的に扱います。 | クラウドURI判定 (`IsRemoteURI`)、パスの結合 (`ResolvePath`)、ディレクトリ解決 (`ResolveBaseDir`)、連番付与 (`GenerateIndexedPath`) | **リファクタ済** |
+| **`giturl`** | **GitリポジトリURL**の解析と、安全で一意な名前の生成を行います。 | リポジトリパス抽出 (`GetRepositoryPath`)、GCSキー名/一意なローカルパスの生成 (`GenerateGCSKeyName`, `SanitizeURLToUniquePath`) | `urlpath` から分離 |
 | **`iohandler`** | **ファイルI/Oと標準入出力を抽象化**します。CLIアプリケーションでの処理を簡潔にします。 | ファイル/標準入力の読込 (`ReadInput`)、ファイル/標準出力への書込 (`WriteOutput`) | - |
-| **`envutil`** | **環境変数**の取得と型変換を安全に行うヘルパーを提供します。 | 環境変数取得 (`GetEnv`)、ブール値への変換 (`GetEnvAsBool`) | - |
+| **`envutil`** | **環境変数**の取得と型変換を安全に行うヘルパーを提供します。 | 環境変数取得 (`GetEnv`)、ブール値への変換 (`GetEnvAsBool`)、整数への変換 (`GetEnvAsInt`) | - |
 | **`timeutil`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。 | JST現在時刻の取得 (`NowJST`)、任意の時刻をJSTへ変換 (`ToJST`) | - |
 | **`text`** | テキストデータのクリーンアップと整形を行います。 | 絵文字除去 (`CleanStringFromEmojis`)、マルチバイト対応の切詰め (`Truncate`)、リストパース | `forPelevin/gomoji` 利用 |
 
@@ -52,6 +53,17 @@ import "github.com/shouni/go-utils/urlpath"
 // リモート(gs://等)かローカルかを問わず、適切にパスを結合します
 path, _ := urlpath.ResolvePath("gs://my-bucket/images", "photo.png")
 // path => "gs://my-bucket/images/photo.png"
+
+```
+
+### GitリポジトリURLの安全な名前生成 (`giturl`)
+
+```go
+import "github.com/shouni/go-utils/giturl"
+
+// GCSオブジェクトキーやローカル一時ディレクトリ名として使える、衝突しない安全な名前を生成します
+name := giturl.GenerateGCSKeyName("git@github.com:owner/repo.git")
+// name => "github-com-owner-repo-xxxxxxxx" (末尾はSHA-256ハッシュの先頭8桁)
 
 ```
 

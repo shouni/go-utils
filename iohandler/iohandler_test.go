@@ -39,8 +39,8 @@ func TestReadInput(t *testing.T) {
 
 		// 書き込みを行ってからクローズしないと、io.ReadAll が終わらない
 		go func() {
-			w.Write(content)
-			w.Close()
+			_, _ = w.Write(content)
+			_ = w.Close()
 		}()
 
 		got, err := ReadInput("")
@@ -49,6 +49,21 @@ func TestReadInput(t *testing.T) {
 		}
 		if !bytes.Equal(got, content) {
 			t.Errorf("got %q, want %q", got, content)
+		}
+	})
+
+	// 3. 標準入力からの読み込み失敗テスト（読み取り側を閉じた後に読み込む）
+	t.Run("Read from stdin fails on closed pipe", func(t *testing.T) {
+		oldStdin := os.Stdin
+		defer func() { os.Stdin = oldStdin }()
+
+		r, w, _ := os.Pipe()
+		_ = w.Close()
+		_ = r.Close() // 読み取り側も閉じ、読み込みを失敗させる
+		os.Stdin = r
+
+		if _, err := ReadInput(""); err == nil {
+			t.Fatal("ReadInput(\"\") error = nil, want error for closed pipe")
 		}
 	})
 }
@@ -72,7 +87,17 @@ func TestWriteOutput(t *testing.T) {
 		}
 	})
 
-	// 2. 標準出力への書き出しテスト
+	// 2. ファイルへの書き出し失敗テスト（存在しないディレクトリ）
+	t.Run("Write to file fails for missing directory", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "no-such-dir", "out.txt")
+
+		err := WriteOutput(tmpFile, content)
+		if err == nil {
+			t.Fatal("WriteOutput() error = nil, want error for missing directory")
+		}
+	})
+
+	// 3. 標準出力への書き出しテスト
 	t.Run("Write to stdout", func(t *testing.T) {
 		// Stdoutを一時的に差し替え
 		oldStdout := os.Stdout
@@ -82,16 +107,31 @@ func TestWriteOutput(t *testing.T) {
 		os.Stdout = w
 
 		err := WriteOutput("", content)
-		w.Close() // 読み取り前にクローズ
+		_ = w.Close() // 読み取り前にクローズ
 
 		if err != nil {
 			t.Fatalf("WriteOutput(\"\") error = %v", err)
 		}
 
 		var buf bytes.Buffer
-		io.Copy(&buf, r)
+		_, _ = io.Copy(&buf, r)
 		if buf.String() != string(content) {
 			t.Errorf("got %q, want %q", buf.String(), string(content))
+		}
+	})
+
+	// 4. 標準出力への書き出し失敗テスト（読み取り側を先に閉じてパイプを破棄）
+	t.Run("Write to stdout fails on closed pipe", func(t *testing.T) {
+		oldStdout := os.Stdout
+		defer func() { os.Stdout = oldStdout }()
+
+		r, w, _ := os.Pipe()
+		_ = r.Close() // 読み取り側を先に閉じ、書き込みを失敗させる
+		os.Stdout = w
+		defer func() { _ = w.Close() }()
+
+		if err := WriteOutput("", content); err == nil {
+			t.Fatal("WriteOutput(\"\") error = nil, want error for closed pipe")
 		}
 	})
 }

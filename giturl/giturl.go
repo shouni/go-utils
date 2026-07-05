@@ -1,4 +1,7 @@
-package urlpath
+// Package giturl は、GitリポジトリのURL（HTTPS/SSH）を解析し、
+// 表示用のリポジトリパスや、GCSキー名・一時ディレクトリ名として使える
+// 安全で一意な名前を生成するユーティリティ関数を提供します。
+package giturl
 
 import (
 	"crypto/sha256"
@@ -67,7 +70,8 @@ func generateSafeUniqueName(repoURL string) string {
 	u, err := url.Parse(repoURL)
 	var rawName string
 
-	if err == nil && u.Host != "" {
+	switch {
+	case err == nil && u.Host != "":
 		host, _, splitErr := net.SplitHostPort(u.Host)
 		if splitErr == nil {
 			// ポートが含まれていた場合
@@ -76,13 +80,13 @@ func generateSafeUniqueName(repoURL string) string {
 			// ポートが含まれていない場合、または SplitHostPort が失敗した場合
 			rawName = u.Host + u.Path
 		}
-	} else if strings.HasPrefix(repoURL, "git@") {
+	case strings.HasPrefix(repoURL, "git@"):
 		// パースが失敗するか、URLライブラリがうまく扱えないGitのSSH形式 (例: git@github.com:user/repo.git)
 		// 'git@' を取り除き、残りを rawName として使用
 		rawName = strings.TrimPrefix(repoURL, "git@")
 		// ホストとパスを分離するコロンをスラッシュに置換 (例: github.com:user/repo -> github.com/user/repo)
 		rawName = strings.ReplaceAll(rawName, ":", "/")
-	} else {
+	default:
 		// それ以外の形式 (パースエラー、あるいは不明な形式)
 		rawName = repoURL
 	}

@@ -1,3 +1,5 @@
+// Package urlpath は、URLやリモートURI（GCS/S3）の解決を行い、
+// クラウドストレージとローカルファイルシステムのパスを透過的に扱うためのユーティリティ関数を提供します。
 package urlpath
 
 import (
