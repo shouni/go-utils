@@ -14,6 +14,22 @@
 
 * **モジュール性**: 各ユーティリティが独立したGoパッケージとして提供されます。
 
+### 収録基準 (What belongs here)
+
+`utils` という名前は何でも受け入れてしまうため、収録の可否は以下で判断します。
+
+1. **外部依存を持たない** — 標準ライブラリだけで完結すること。
+   *現在の例外は `text` のみ（絵文字判定に `forPelevin/gomoji`、書記素クラスタ分割に `rivo/uniseg` を利用）。新規追加では認めません。*
+2. **I/O やインフラに触れない** — ネットワーク・ファイルシステム・クラウドSDKを扱うものは対象外です。
+   それらは `go-remote-io` や `gcp-kit` など、目的別のライブラリへ置いてください。
+3. **2つ以上のプロジェクトから使われる** — 単一プロジェクトでしか使わないものは、
+   その利用者側の `internal/` に置いてください。汎用に見えても、実際にはその
+   プロジェクト固有の判断に紐づいていることが多いためです。
+
+過去に基準を満たさないまま同居していた `giturl`（利用者が1つ・Git ドメイン固有）と
+`iohandler`（利用者ゼロ）は v1.3.0 で削除しました。前者は
+[git-gemini-web](https://github.com/shouni/git-gemini-web) の `internal/giturl` へ移設済みです。
+
 ---
 
 ## 🛠️ インストール
@@ -36,11 +52,9 @@ go get github.com/shouni/go-utils
 | パッケージ | 説明 | 主な提供機能 | 関連情報 |
 | --- | --- | --- | --- |
 | **`urlpath`** | **URLやリモートURI（GCS/S3）の解決**を行い、クラウドとローカルを透過的に扱います。 | クラウドURI判定 (`IsRemoteURI`)、パスの結合 (`ResolvePath`)、ディレクトリ解決 (`ResolveBaseDir`)、連番付与 (`GenerateIndexedPath`) | **リファクタ済** |
-| **`giturl`** | **GitリポジトリURL**の解析と、安全で一意な名前の生成を行います。 | リポジトリパス抽出 (`GetRepositoryPath`)、GCSキー名/一意なローカルパスの生成 (`GenerateGCSKeyName`, `SanitizeURLToUniquePath`) | `urlpath` から分離 |
-| **`iohandler`** | **ファイルI/Oと標準入出力を抽象化**します。CLIアプリケーションでの処理を簡潔にします。 | ファイル/標準入力の読込 (`ReadInput`)、ファイル/標準出力への書込 (`WriteOutput`) | - |
 | **`envutil`** | **環境変数**の取得と型変換を安全に行うヘルパーを提供します。 | 環境変数取得 (`GetEnv`)、ブール値への変換 (`GetEnvAsBool`)、整数への変換 (`GetEnvAsInt`) | - |
 | **`timeutil`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。 | JST現在時刻の取得 (`NowJST`)、任意の時刻をJSTへ変換 (`ToJST`) | - |
-| **`text`** | テキストデータのクリーンアップと整形を行います。 | 絵文字除去 (`CleanStringFromEmojis`)、マルチバイト対応の切詰め (`Truncate`)、リストパース | `forPelevin/gomoji` 利用 |
+| **`text`** | テキストデータのクリーンアップと整形を行います。 | 絵文字除去 (`CleanStringFromEmojis`)、**書記素クラスタ単位**の切詰め (`Truncate`)、リストパース | `forPelevin/gomoji` / `rivo/uniseg` 利用 |
 | **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`)、パストラバーサル対策の正規化 (`Sanitize`)、辞書順ソート可能な ID 生成 (`New`) | 外部依存なし |
 | **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) | 外部依存なし・出力フォーマットには関与しない |
 
@@ -59,14 +73,28 @@ path, _ := urlpath.ResolvePath("gs://my-bucket/images", "photo.png")
 
 ```
 
-### GitリポジトリURLの安全な名前生成 (`giturl`)
+### ジョブIDの検証と正規化 (`jobid`)
 
 ```go
-import "github.com/shouni/go-utils/giturl"
+import "github.com/shouni/go-utils/jobid"
 
-// GCSオブジェクトキーやローカル一時ディレクトリ名として使える、衝突しない安全な名前を生成します
-name := giturl.GenerateGCSKeyName("git@github.com:owner/repo.git")
-// name => "github-com-owner-repo-xxxxxxxx" (末尾はSHA-256ハッシュの先頭8桁)
+// URLパスやストレージパスへ埋め込む前に、パス要素を落として検証します
+id, err := jobid.Sanitize("../../20260726123456-abcd1234")
+// id => "20260726123456-abcd1234"
+
+```
+
+### context を使ったログの相関 (`slogctx`)
+
+```go
+import "github.com/shouni/go-utils/slogctx"
+
+// ハンドラーを包むと、context に積んだ属性が以降のログすべてに載ります
+base := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slogctx.ParseLevel(os.Getenv("LOG_LEVEL"))})
+slog.SetDefault(slog.New(slogctx.NewHandler(base)))
+
+ctx := slogctx.With(ctx, slog.String("job_id", jobID))
+slog.InfoContext(ctx, "phase started") // => {"job_id":"...", ...}
 
 ```
 
