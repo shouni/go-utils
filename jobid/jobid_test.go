@@ -133,7 +133,7 @@ func TestNewIsLexicographicallySortable(t *testing.T) {
 		t.Fatalf("newAt() error = %v", err)
 	}
 
-	if !(older < newer) {
+	if older >= newer {
 		t.Fatalf("expected %q < %q", older, newer)
 	}
 }
