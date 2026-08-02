@@ -55,7 +55,7 @@ go get github.com/shouni/go-utils
 | **`envutil`** | **環境変数**の取得と型変換を安全に行うヘルパーを提供します。 | 環境変数取得 (`GetEnv`)、ブール値への変換 (`GetEnvAsBool`)、整数への変換 (`GetEnvAsInt`) | - |
 | **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | JST現在時刻の取得 (`Now`)、任意の時刻をJSTへ変換 (`From`)、整形 (`Format`)、環境非依存のパース (`Parse`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) | v1.4.0 で `timeutil` から改名 |
 | **`text`** | テキストデータのクリーンアップと整形を行います。 | 絵文字除去 (`CleanStringFromEmojis`)、**書記素クラスタ単位**の切詰め (`Truncate`)、リストパース | `forPelevin/gomoji` / `rivo/uniseg` 利用 |
-| **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`)、パストラバーサル対策の正規化 (`Sanitize`)、辞書順ソート可能な ID 生成 (`New`)、埋め込み時刻の復元 (`CreatedAt`, `SortKey`) | 外部依存なし |
+| **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`)、パストラバーサル対策の正規化 (`Sanitize`)、時刻プレフィックス付き ID の生成 (`New`)、埋め込み時刻の復元 (`CreatedAt`) と並べ替えキー (`SortKey`) | 外部依存なし |
 | **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) | 外部依存なし・出力フォーマットには関与しない |
 
 ---
@@ -81,6 +81,14 @@ import "github.com/shouni/go-utils/jobid"
 // URLパスやストレージパスへ埋め込む前に、パス要素を落として検証します
 id, err := jobid.Sanitize("../../20260726123456-abcd1234")
 // id => "20260726123456-abcd1234"
+
+// 埋め込まれた生成時刻を UTC で取り出します（表示は jst で JST へ変換）
+createdAt, err := jobid.CreatedAt("video-recipe-20260726-123456-abcd1234")
+// createdAt => 2026-07-26 12:34:56 +0000 UTC
+
+// 用途プレフィックスが混在する一覧を、作成日時の降順で並べるためのキー
+key := jobid.SortKey("video-recipe-20260726-123456-abcd1234")
+// key => "20260726123456"（時刻を持たない ID では空文字）
 
 ```
 
