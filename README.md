@@ -53,7 +53,7 @@ go get github.com/shouni/go-utils
 | --- | --- | --- | --- |
 | **`urlpath`** | **URLやリモートURI（GCS/S3）の解決**を行い、クラウドとローカルを透過的に扱います。 | クラウドURI判定 (`IsRemoteURI`)、パスの結合 (`ResolvePath`)、ディレクトリ解決 (`ResolveBaseDir`)、連番付与 (`GenerateIndexedPath`) | **リファクタ済** |
 | **`envutil`** | **環境変数**の取得と型変換を安全に行うヘルパーを提供します。 | 環境変数取得 (`GetEnv`)、ブール値への変換 (`GetEnvAsBool`)、整数への変換 (`GetEnvAsInt`) | - |
-| **`timeutil`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。 | JST現在時刻の取得 (`NowJST`)、任意の時刻をJSTへ変換 (`ToJST`) | - |
+| **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | JST現在時刻の取得 (`Now`)、任意の時刻をJSTへ変換 (`From`)、整形 (`Format`)、環境非依存のパース (`Parse`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) | v1.4.0 で `timeutil` から改名 |
 | **`text`** | テキストデータのクリーンアップと整形を行います。 | 絵文字除去 (`CleanStringFromEmojis`)、**書記素クラスタ単位**の切詰め (`Truncate`)、リストパース | `forPelevin/gomoji` / `rivo/uniseg` 利用 |
 | **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`)、パストラバーサル対策の正規化 (`Sanitize`)、辞書順ソート可能な ID 生成 (`New`) | 外部依存なし |
 | **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) | 外部依存なし・出力フォーマットには関与しない |
