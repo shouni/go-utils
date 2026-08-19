@@ -6,61 +6,39 @@
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-utils)](https://github.com/shouni/go-utils/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**`Go Utils`** は、Go言語でアプリケーションを開発する際に繰り返し必要となる、汎用的なユーティリティ機能を集めたライブラリです。
-
-それぞれの機能が独立したパッケージとして提供されるため、必要なものだけをインポートして、クリーンな依存関係を維持できます。
+**`Go Utils`** は、複数のプロジェクトで実際に重複していた小さな処理だけを集めたモジュールです。パッケージ同士は独立しているため、必要なものだけをインポートできます。
 
 ## ✨ 収録基準 (What belongs here)
 
 `utils` という名前は何でも受け入れてしまうため、収録の可否は以下で判断します。
 
 1. **外部依存を持たない** — 標準ライブラリだけで完結すること。
-   *現在の例外は `text` のみ（絵文字判定に `forPelevin/gomoji`、書記素クラスタ分割に `rivo/uniseg` を利用）。新規追加では認めません。*
+   *現在このモジュールの `go.mod` に `require` はありません。例外は作らない方針です。*
 2. **I/O やインフラに触れない** — ネットワーク・ファイルシステム・クラウドSDKを扱うものは対象外です。
    それらは `go-remote-io` や `gcp-kit` など、目的別のライブラリへ置いてください。
 3. **2つ以上のプロジェクトから使われる** — 単一プロジェクトでしか使わないものは、
    その利用者側の `internal/` に置いてください。汎用に見えても、実際にはそのプロジェクト固有の判断に紐づいていることが多いためです。
 
----
-
-## 🛠️ インストール
+## 🛠️ インストール (Installation)
 
 ```bash
 go get github.com/shouni/go-utils
 ```
 
-利用するパッケージだけをインポートしてください（例: `import "github.com/shouni/go-utils/urlpath"`）。
-
----
+インポートはパッケージ単位で行います（例: `import "github.com/shouni/go-utils/jobid"`）。
 
 ## 📦 パッケージ構成 (Package Structure)
 
-以下のパッケージがこのリポジトリで提供されています。
+| パッケージ | 説明 | 主な提供機能 |
+| --- | --- | --- |
+| **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`)、パストラバーサル対策の正規化 (`Sanitize`)、用途プレフィックスと生成時刻を含む ID の採番 (`New`)、埋め込み時刻の復元 (`CreatedAt`) と並べ替えキー (`SortKey`) |
+| **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。出力フォーマットには関与しません。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) |
+| **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | 現在時刻の取得 (`Now`)、任意の時刻を JST へ変換 (`From`)、整形 (`Format`)、環境非依存のパース (`Parse`)、ロケーション取得 (`Location`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) |
+| **`strlist`** | 設定値として読み込んだ**分割済みの文字列リスト**を整えます。カンマ区切りの分割そのものは設定ライブラリの担当で、その後始末を引き受けます。 | 前後の空白・空要素・重複を落とす正規化 (`Normalize`) |
 
-| パッケージ | 説明 | 主な提供機能 | 関連情報 |
-| --- | --- | --- | --- |
-| **`urlpath`** | **URLやリモートURI（GCS/S3）の解決**を行い、クラウドとローカルを透過的に扱います。 | クラウドURI判定 (`IsRemoteURI`, `IsGCSURI`, `IsS3URI`)、パスの結合 (`ResolvePath`)、ディレクトリ解決 (`ResolveBaseDir`)、連番付与 (`GenerateIndexedPath`) | 外部依存なし・クラウドSDKは呼びません |
-| **`envutil`** | **環境変数**の取得と型変換を安全に行うヘルパーを提供します。 | 環境変数取得 (`GetEnv`)、ブール値への変換 (`GetEnvAsBool`)、整数への変換 (`GetEnvAsInt`) | 外部依存なし |
-| **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | JST現在時刻の取得 (`Now`)、任意の時刻をJSTへ変換 (`From`)、整形 (`Format`)、環境非依存のパース (`Parse`)、ロケーション取得 (`Location`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) | v1.4.0 で `timeutil` から改名 |
-| **`text`** | テキストデータのクリーンアップと整形を行います。 | 絵文字除去 (`RemoveEmojis`, `CleanStringFromEmojis`)、空白の正規化 (`NormalizeText`)、**書記素クラスタ単位**の切詰め (`Truncate`)、カンマ区切りのパース (`ParseCommaSeparatedList`) | `forPelevin/gomoji` / `rivo/uniseg` 利用 |
-| **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`)、パストラバーサル対策の正規化 (`Sanitize`)、用途プレフィックスと生成時刻を含む ID の採番 (`New`)、埋め込み時刻の復元 (`CreatedAt`) と並べ替えキー (`SortKey`) | 外部依存なし |
-| **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) | 外部依存なし・出力フォーマットには関与しない |
+## 🚀 クイックスタート (Quick Start)
 
----
-
-## 🚀 クイックスタート
-
-### パスの解決 (`urlpath`)
-
-```go
-import "github.com/shouni/go-utils/urlpath"
-
-// リモート(gs://等)かローカルかを問わず、適切にパスを結合します
-path, _ := urlpath.ResolvePath("gs://my-bucket/images", "photo.png")
-// path => "gs://my-bucket/images/photo.png"
-```
-
-### ジョブIDの検証と正規化 (`jobid`)
+### ジョブ ID の検証と正規化 (`jobid`)
 
 ```go
 import "github.com/shouni/go-utils/jobid"
@@ -96,9 +74,7 @@ ctx = slogctx.With(ctx, slog.String("job_id", jobID))
 slog.InfoContext(ctx, "phase started") // => {"job_id":"...", ...}
 ```
 
-`slogctx` を除く各パッケージには `example_test.go`（`go test` で出力まで検証される実行可能な例）があります。詳しい使い方はそちらを参照してください。
-
----
+`jobid` / `jst` / `strlist` には `example_test.go`（`go test` で出力まで検証される実行可能な例）があります。詳しい使い方はそちらを参照してください。
 
 ## 📜 ライセンス (License)
 
