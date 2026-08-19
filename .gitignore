@@ -43,3 +43,6 @@ config.yaml.bak
 # ...
 /go-utils.iml
 
+
+# Claude Code local settings
+.claude/settings.local.json
