@@ -116,8 +116,7 @@ func TestParse_Invalid(t *testing.T) {
 	}
 
 	// %w でラップされ、time.ParseError を取り出せること。
-	var parseErr *time.ParseError
-	if !errors.As(err, &parseErr) {
+	if _, ok := errors.AsType[*time.ParseError](err); !ok {
 		t.Errorf("Parse() のエラーが *time.ParseError をラップしていません: %v", err)
 	}
 }

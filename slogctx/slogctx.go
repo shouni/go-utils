@@ -102,8 +102,8 @@ func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 	// context 自身の重複は後から積んだほうを残すため、後ろから見て初出だけを拾い、
 	// 並びは元のまま戻します。
 	kept := make([]slog.Attr, 0, len(attrs))
-	for i := len(attrs) - 1; i >= 0; i-- {
-		a := attrs[i]
+	for _, a := range slices.Backward(attrs) {
+
 		if _, dup := seen[a.Key]; dup {
 			continue
 		}
