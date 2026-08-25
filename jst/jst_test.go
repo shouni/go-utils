@@ -116,8 +116,20 @@ func TestParse_Invalid(t *testing.T) {
 	}
 
 	// %w でラップされ、time.ParseError を取り出せること。
-	var parseErr *time.ParseError
-	if !errors.As(err, &parseErr) {
+	if _, ok := errors.AsType[*time.ParseError](err); !ok {
 		t.Errorf("Parse() のエラーが *time.ParseError をラップしていません: %v", err)
+	}
+}
+
+// TestFormatDisplayAndTimestamp は、それぞれが対応するレイアウト定数へ委譲することを
+// 確認します。定数ごとの出力そのものは TestFormat が確認しています。
+func TestFormatDisplayAndTimestamp(t *testing.T) {
+	utcTime := time.Date(2026, time.July, 25, 6, 4, 5, 0, time.UTC)
+
+	if got, want := jst.FormatDisplay(utcTime), jst.Format(utcTime, jst.LayoutDisplay); got != want {
+		t.Errorf("FormatDisplay() = %q, want %q", got, want)
+	}
+	if got, want := jst.FormatTimestamp(utcTime), jst.Format(utcTime, jst.LayoutTimestamp); got != want {
+		t.Errorf("FormatTimestamp() = %q, want %q", got, want)
 	}
 }

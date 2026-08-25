@@ -19,17 +19,22 @@ import (
 
 // ParseLevel は環境変数などの文字列を slog のレベルへ変換します。
 // 前後の空白は無視し、大文字小文字は区別しません。未知の値と空文字は Info とみなします。
+//
+// 解釈は slog.Level.UnmarshalText に委ねるため、"DEBUG" などの名前に加えて
+// slog が定める相対表記（"DEBUG+2" や "ERROR-1"）もそのまま使えます。
+// "WARNING" だけは slog が受け付けないものの、環境変数としては広く使われるため
+// "WARN" と同義に扱います。
 func ParseLevel(raw string) slog.Level {
-	switch strings.ToUpper(strings.TrimSpace(raw)) {
-	case "DEBUG":
-		return slog.LevelDebug
-	case "WARN", "WARNING":
-		return slog.LevelWarn
-	case "ERROR":
-		return slog.LevelError
-	default:
+	name := strings.ToUpper(strings.TrimSpace(raw))
+	if name == "WARNING" {
+		name = "WARN"
+	}
+
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(name)); err != nil {
 		return slog.LevelInfo
 	}
+	return level
 }
 
 type contextKey struct{}
@@ -76,7 +81,6 @@ func NewHandler(base slog.Handler) slog.Handler {
 	return &handler{Handler: base}
 }
 
-// handler は context 由来の属性をレコードへ付与する slog.Handler です。
 type handler struct {
 	slog.Handler
 }
@@ -102,8 +106,7 @@ func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 	// context 自身の重複は後から積んだほうを残すため、後ろから見て初出だけを拾い、
 	// 並びは元のまま戻します。
 	kept := make([]slog.Attr, 0, len(attrs))
-	for i := len(attrs) - 1; i >= 0; i-- {
-		a := attrs[i]
+	for _, a := range slices.Backward(attrs) {
 		if _, dup := seen[a.Key]; dup {
 			continue
 		}

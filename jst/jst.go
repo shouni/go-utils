@@ -72,6 +72,21 @@ func Format(t time.Time, layout string) string {
 	return From(t).Format(layout)
 }
 
+// FormatDisplay は LayoutDisplay で整形します。履歴一覧など、並べて表示する時刻の
+// 表記を揃えるために使います。
+//
+// Format にレイアウト定数を渡しても同じ結果になりますが、2 つの定数は末尾の扱いが
+// 異なるため取り違えても気づきにくく、名前で選べるようにしています。
+func FormatDisplay(t time.Time) string {
+	return Format(t, LayoutDisplay)
+}
+
+// FormatTimestamp は LayoutTimestamp で整形します。通知フッターなど、JST 固定である
+// ことを明示したい箇所で使います。
+func FormatTimestamp(t time.Time) string {
+	return Format(t, LayoutTimestamp)
+}
+
 // Parse は、タイムゾーン情報を含まない時刻文字列を JST として解釈し、time.Time を返します。
 //
 // time.Parse はタイムゾーン略称をホストの time.Local と照合するため、実行環境の
