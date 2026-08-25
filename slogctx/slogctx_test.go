@@ -42,6 +42,11 @@ func TestParseLevel(t *testing.T) {
 		{"ERROR", slog.LevelError},
 		{"", slog.LevelInfo},
 		{"nonsense", slog.LevelInfo},
+		// slog が定める相対表記。段階的にログ量を絞るために使えること。
+		{"INFO+2", slog.LevelInfo + 2},
+		{"error-1", slog.LevelError - 1},
+		// 相対表記の数値部分が壊れている場合も、既定の Info に落ちること。
+		{"INFO+x", slog.LevelInfo},
 	}
 
 	for _, tt := range tests {

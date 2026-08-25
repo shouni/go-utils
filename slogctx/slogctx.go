@@ -19,17 +19,22 @@ import (
 
 // ParseLevel は環境変数などの文字列を slog のレベルへ変換します。
 // 前後の空白は無視し、大文字小文字は区別しません。未知の値と空文字は Info とみなします。
+//
+// 解釈は slog.Level.UnmarshalText に委ねるため、"DEBUG" などの名前に加えて
+// slog が定める相対表記（"DEBUG+2" や "ERROR-1"）もそのまま使えます。
+// "WARNING" だけは slog が受け付けないものの、環境変数としては広く使われるため
+// "WARN" と同義に扱います。
 func ParseLevel(raw string) slog.Level {
-	switch strings.ToUpper(strings.TrimSpace(raw)) {
-	case "DEBUG":
-		return slog.LevelDebug
-	case "WARN", "WARNING":
-		return slog.LevelWarn
-	case "ERROR":
-		return slog.LevelError
-	default:
+	name := strings.ToUpper(strings.TrimSpace(raw))
+	if name == "WARNING" {
+		name = "WARN"
+	}
+
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(name)); err != nil {
 		return slog.LevelInfo
 	}
+	return level
 }
 
 type contextKey struct{}
