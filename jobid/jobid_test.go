@@ -1,6 +1,7 @@
 package jobid
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -173,5 +174,73 @@ func TestIsValid(t *testing.T) {
 	}
 	if IsValid("../etc/passwd") {
 		t.Error("IsValid() = true, want false")
+	}
+}
+
+// 呼び出し側がエラーの種類で分岐できること。
+func TestValidateErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		id   string
+		want error
+	}{
+		"空文字":     {id: "", want: ErrEmpty},
+		"長さ上限超過":  {id: strings.Repeat("a", MaxLength+1), want: ErrTooLong},
+		"先頭がハイフン": {id: "-leading", want: ErrInvalidFormat},
+		"ドットを含む":  {id: "has.dot", want: ErrInvalidFormat},
+		"非 ASCII": {id: "日本語", want: ErrInvalidFormat},
+	}
+	for name, tt := range tests {
+		if err := Validate(tt.id); !errors.Is(err, tt.want) {
+			t.Errorf("%s: Validate(%q) = %v, want %v", name, tt.id, err, tt.want)
+		}
+	}
+}
+
+// 空入力は path.Base が返す "." ではなく、入力そのものを表すエラーになること。
+func TestSanitizeEmptyReportsMissingInput(t *testing.T) {
+	t.Parallel()
+
+	for _, input := range []string{"", "   "} {
+		_, err := Sanitize(input)
+		if !errors.Is(err, ErrEmpty) {
+			t.Errorf("Sanitize(%q) = %v, want %v", input, err, ErrEmpty)
+		}
+		if err != nil && strings.Contains(err.Error(), ".") {
+			t.Errorf("Sanitize(%q) error mentions a path element that was not in the input: %v", input, err)
+		}
+	}
+}
+
+// プレフィックスが長すぎても ID 発行は失敗せず、切り詰められること。
+func TestNewTruncatesLongPrefix(t *testing.T) {
+	t.Parallel()
+
+	id, err := New(strings.Repeat("a", MaxLength*2))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if err := Validate(id); err != nil {
+		t.Fatalf("New() produced an invalid id %q: %v", id, err)
+	}
+	if len(id) != MaxLength {
+		t.Fatalf("len(New()) = %d, want %d (the prefix should fill the id up to the limit)", len(id), MaxLength)
+	}
+}
+
+// New が区切りのハイフンを付けるため、プレフィックス末尾の区切り文字が二重にならないこと。
+func TestNewTrimsTrailingSeparatorInPrefix(t *testing.T) {
+	t.Parallel()
+
+	for _, prefix := range []string{"video-recipe-", "video-recipe__"} {
+		id, err := New(prefix)
+		if err != nil {
+			t.Errorf("New(%q) error = %v", prefix, err)
+			continue
+		}
+		if !strings.HasPrefix(id, "video-recipe-2") {
+			t.Errorf("New(%q) = %q, want the separator collapsed", prefix, id)
+		}
 	}
 }
