@@ -16,6 +16,22 @@ import "strings"
 // 既定値で埋めることはせず、入力が空なら空のスライスを返します。空のまま通してよいかは
 // 利用側の検証が決めるべき事柄で、ここで既定値を差し込むと設定漏れが隠れるためです。
 func Normalize(values []string) []string {
+	return normalize(values, nil)
+}
+
+// NormalizeFold は、Normalize に加えて各要素を小文字化し、大文字小文字の違いを
+// 重複とみなします。`["Example.com", "EXAMPLE.com"]` は `["example.com"]` になります。
+//
+// ホスト名やメールドメイン、識別子の許可リストのように、値そのものが大文字小文字を
+// 区別しない設定で使います。照合側も同じく小文字化してから比較してください。
+// 大文字小文字に意味がある値（トークンや API キーなど）には Normalize を使います。
+func NormalizeFold(values []string) []string {
+	return normalize(values, strings.ToLower)
+}
+
+// normalize は Normalize と NormalizeFold の共通処理です。
+// fold が nil でなければ、空白を落とした後の各要素へ適用します。
+func normalize(values []string, fold func(string) string) []string {
 	seen := make(map[string]struct{}, len(values))
 	normalized := make([]string, 0, len(values))
 
@@ -23,6 +39,9 @@ func Normalize(values []string) []string {
 		v = strings.TrimSpace(v)
 		if v == "" {
 			continue
+		}
+		if fold != nil {
+			v = fold(v)
 		}
 		if _, ok := seen[v]; ok {
 			continue

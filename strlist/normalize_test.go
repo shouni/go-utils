@@ -81,3 +81,26 @@ func TestNormalizeDoesNotMutateInput(t *testing.T) {
 		t.Errorf("入力が書き換えられました: %v, want %v", input, want)
 	}
 }
+
+// 大文字小文字の違いを重複とみなし、小文字化して返すこと。
+func TestNormalizeFold(t *testing.T) {
+	got := strlist.NormalizeFold([]string{"Example.com", " EXAMPLE.com ", "", "Other.example"})
+	want := []string{"example.com", "other.example"}
+
+	if len(got) != len(want) {
+		t.Fatalf("NormalizeFold() = %q, want %q", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("NormalizeFold() = %q, want %q", got, want)
+		}
+	}
+}
+
+// Normalize は大文字小文字を区別したままであること（NormalizeFold との違い）。
+func TestNormalizeKeepsCase(t *testing.T) {
+	got := strlist.Normalize([]string{"Example.com", "example.com"})
+	if len(got) != 2 {
+		t.Fatalf("Normalize() = %q, want both entries kept", got)
+	}
+}
