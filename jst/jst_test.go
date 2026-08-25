@@ -120,3 +120,23 @@ func TestParse_Invalid(t *testing.T) {
 		t.Errorf("Parse() のエラーが *time.ParseError をラップしていません: %v", err)
 	}
 }
+
+// TestFormatDisplayAndTimestamp は、レイアウト定数を直接渡した場合と同じ結果になり、
+// 2 つの定数の違い（分精度とタイムゾーン略称 / 秒精度と "JST" リテラル）が出ることを確認します。
+func TestFormatDisplayAndTimestamp(t *testing.T) {
+	utcTime := time.Date(2026, time.July, 25, 6, 4, 5, 0, time.UTC)
+
+	if got, want := jst.FormatDisplay(utcTime), jst.Format(utcTime, jst.LayoutDisplay); got != want {
+		t.Errorf("FormatDisplay() = %q, want %q", got, want)
+	}
+	if got, want := jst.FormatTimestamp(utcTime), jst.Format(utcTime, jst.LayoutTimestamp); got != want {
+		t.Errorf("FormatTimestamp() = %q, want %q", got, want)
+	}
+
+	if got, want := jst.FormatDisplay(utcTime), "2026-07-25 15:04 JST"; got != want {
+		t.Errorf("FormatDisplay() = %q, want %q", got, want)
+	}
+	if got, want := jst.FormatTimestamp(utcTime), "2026/07/25 15:04:05 JST"; got != want {
+		t.Errorf("FormatTimestamp() = %q, want %q", got, want)
+	}
+}

@@ -35,3 +35,15 @@ func ExampleParse() {
 	fmt.Println(jst.Format(t, "15時04分"))
 	// Output: 18時30分
 }
+
+func ExampleFormatDisplay() {
+	utcTime := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
+	fmt.Println(jst.FormatDisplay(utcTime))
+	// Output: 2025-01-01 09:00 JST
+}
+
+func ExampleFormatTimestamp() {
+	utcTime := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
+	fmt.Println(jst.FormatTimestamp(utcTime))
+	// Output: 2025/01/01 09:00:00 JST
+}
