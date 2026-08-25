@@ -143,8 +143,8 @@ func countKey(t *testing.T, out []byte, key string) int {
 }
 
 // 呼び出し側が context と同じキーを渡しても、出力にそのキーが 2 つ並ばないこと。
-// 並んでも JSON としては不正ではないため誰も失敗せず、Cloud Logging では連結された
-// job_id ができあがって、その ID での検索に当たらなくなります。
+// 並んでも JSON としては不正ではないため誰も失敗せず、取り込む側で壊れます
+// （理由は Handle のコメント）。
 func TestCallerAttrOverridesContextAttr(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, slog.LevelInfo)
