@@ -128,6 +128,112 @@ func TestContextAttrsSurviveWithGroup(t *testing.T) {
 	}
 }
 
+// countKey は、出力された JSON にそのキーが何回現れるかを数えます。
+//
+// **重複はマップへ復号した時点で消えます**（後勝ちで 1 つにまとまります）。
+// 検出したいのは重複そのものなので、生の出力を数えます。値に同じ並びが現れると
+// 誤検出しますが、テストの値はこちらで決めているので起きません。
+func countKey(t *testing.T, out []byte, key string) int {
+	t.Helper()
+	return bytes.Count(out, []byte(`"`+key+`":`))
+}
+
+// ★ 呼び出し側が context と同じキーを渡しても、出力にそのキーが 2 つ並ばないこと。
+//
+// 並んでも JSON としては不正ではないため誰も失敗せず、解釈は取り込む側に委ねられます。
+// Cloud Logging は連結するので job_id が "job-1job-1" になり、**その ID で検索しても
+// 当たりません。** 相関のために載せた属性が相関を壊す、という裏返った結果になります。
+func TestCallerAttrOverridesContextAttr(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf, slog.LevelInfo)
+
+	ctx := With(context.Background(), slog.String("job_id", "job-1"), slog.String("mode", "code"))
+	logger.InfoContext(ctx, "msg", "mode", "novel", "diff_bytes", 56676)
+
+	out := append([]byte(nil), buf.Bytes()...)
+	for _, key := range []string{"mode", "job_id"} {
+		if n := countKey(t, out, key); n != 1 {
+			t.Errorf("%s の出現回数 = %d, want 1 (出力: %s)", key, n, out)
+		}
+	}
+
+	entries := decodeLines(t, &buf)
+	if len(entries) != 1 {
+		t.Fatalf("entries = %d, want 1", len(entries))
+	}
+	// 具体的なほうが勝ちます。context はスコープ共通の値、呼び出し側はその場の値です。
+	if entries[0]["mode"] != "novel" {
+		t.Errorf("mode = %v, want novel（呼び出し側の値）", entries[0]["mode"])
+	}
+	// 衝突していないキーは、これまでどおり context から載ります。
+	if entries[0]["job_id"] != "job-1" {
+		t.Errorf("job_id = %v, want job-1", entries[0]["job_id"])
+	}
+}
+
+// 同じキーを 2 度積んだ場合、後から積んだほうが残ること。
+//
+// With を重ねるのはスコープを内側へ絞る操作なので、内側で上書きしたつもりの値が
+// 外側に負けると、上書きする手段が無くなります。
+func TestLaterWithWinsOnSameKey(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf, slog.LevelInfo)
+
+	ctx := With(context.Background(), slog.String("phase", "collect"))
+	logger.InfoContext(With(ctx, slog.String("phase", "publish")), "msg")
+
+	out := append([]byte(nil), buf.Bytes()...)
+	if n := countKey(t, out, "phase"); n != 1 {
+		t.Fatalf("phase の出現回数 = %d, want 1 (出力: %s)", n, out)
+	}
+	entries := decodeLines(t, &buf)
+	if entries[0]["phase"] != "publish" {
+		t.Errorf("phase = %v, want publish（後から積んだ値）", entries[0]["phase"])
+	}
+}
+
+// 衝突を落としても、残った属性の並びが崩れないこと。
+func TestSurvivingContextAttrsKeepOrder(t *testing.T) {
+	var buf bytes.Buffer
+	logger := newTestLogger(&buf, slog.LevelInfo)
+
+	ctx := With(context.Background(),
+		slog.String("job_id", "job-1"),
+		slog.String("mode", "code"),
+		slog.String("command", "review"),
+	)
+	logger.InfoContext(ctx, "msg", "mode", "novel")
+
+	out := buf.Bytes()
+	first, second := bytes.Index(out, []byte(`"job_id":`)), bytes.Index(out, []byte(`"command":`))
+	if first < 0 || second < 0 || first > second {
+		t.Errorf("job_id は command より前に出るべきです (出力: %s)", out)
+	}
+}
+
+// グループの中でも衝突が潰れること。context 由来の属性もグループへ入るためです。
+func TestCallerAttrOverridesContextAttrInsideGroup(t *testing.T) {
+	var buf bytes.Buffer
+	base := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
+	logger := slog.New(NewHandler(base).WithGroup("req"))
+
+	ctx := With(context.Background(), slog.String("job_id", "job-1"))
+	logger.InfoContext(ctx, "msg", "job_id", "job-2")
+
+	out := append([]byte(nil), buf.Bytes()...)
+	if n := countKey(t, out, "job_id"); n != 1 {
+		t.Fatalf("job_id の出現回数 = %d, want 1 (出力: %s)", n, out)
+	}
+	entries := decodeLines(t, &buf)
+	group, ok := entries[0]["req"].(map[string]any)
+	if !ok {
+		t.Fatalf("グループ req が出力されていない: %v", entries[0])
+	}
+	if group["job_id"] != "job-2" {
+		t.Errorf("req.job_id = %v, want job-2（呼び出し側の値）", group["job_id"])
+	}
+}
+
 func TestWithNoAttrsReturnsSameContext(t *testing.T) {
 	ctx := context.Background()
 	if got := With(ctx); got != ctx {
