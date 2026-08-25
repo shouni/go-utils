@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/shouni/go-utils/actions/workflows/ci.yml/badge.svg)](https://github.com/shouni/go-utils/actions/workflows/ci.yml)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen)](#)
-[![Language](https://img.shields.io/badge/Language-Go-blue)](https://golang.org/)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/shouni/go-utils)](https://golang.org/)
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-utils)](https://github.com/shouni/go-utils/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -74,17 +73,14 @@ slog.SetDefault(slog.New(slogctx.NewHandler(base)))
 ctx = slogctx.With(ctx, slog.String("job_id", jobID))
 slog.InfoContext(ctx, "phase started") // => {"job_id":"...", ...}
 
-// 呼び出し側が同じキーを渡した場合は、呼び出し側の値だけが載ります（その場の値の
-// ほうが具体的なため）。同じキーを 2 つ並べると、JSON としては不正ではないので
-// 誰も失敗せず、解釈は取り込む側任せになります。Cloud Logging は連結するため
-// job_id が "job-1job-1" となり、その ID で検索しても当たらなくなります。
+// 呼び出し側が同じキーを渡した場合は、その場の値のほうが具体的なので呼び出し側だけが載ります
 slog.InfoContext(ctx, "phase started", "job_id", "other") // => {"job_id":"other", ...}
 ```
 
-同じキーを 2 度積んだ場合は、**後から積んだほうが残ります**（`With` を重ねるのは
-スコープを内側へ絞る操作なので、内側の上書きが効かないと手段が無くなります）。
-`logger.With` で足した属性は委譲先が保持していてここからは見えないため、そちらとの
-衝突は防げません。相関 ID は context に載せてください。
+キーが衝突したときの扱いは 2 つです。呼び出し側と context が衝突すれば呼び出し側が残り、
+同じキーを 2 度積んだ場合は後から積んだほうが残ります。理由は `NewHandler` の
+ドキュメントコメントにあります。ただし `logger.With` で足した属性は委譲先が保持していて
+ここからは見えないため、そちらとの衝突は防げません。相関 ID は context に載せてください。
 
 `jobid` / `jst` / `strlist` には `example_test.go`（`go test` で出力まで検証される実行可能な例）があります。詳しい使い方はそちらを参照してください。
 

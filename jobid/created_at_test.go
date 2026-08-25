@@ -110,8 +110,7 @@ func TestSortKey(t *testing.T) {
 		}
 	}
 
-	// キーの降順が作成日時の新しい順になり、時刻なしが末尾に回ること
-	// （paging.WithSortKey の契約）。
+	// キーの降順が作成日時の新しい順になり、時刻なしが末尾に回ること。
 	descending := []string{keys[2], keys[0], keys[1], keys[3]}
 	for i := 0; i+1 < len(descending); i++ {
 		if descending[i] <= descending[i+1] {

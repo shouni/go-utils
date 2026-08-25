@@ -25,9 +25,7 @@ const (
 
 const locationName = "Asia/Tokyo"
 
-// Location のキャッシュ。sync.Once により初期化は一度だけ行われます。
-//
-// パッケージ変数の即時初期化にしないのは、ロード失敗時の警告を
+// Location のキャッシュ。パッケージ変数の即時初期化にしないのは、ロード失敗時の警告を
 // 利用側が slog のハンドラーを設定するより前に出力してしまうためです。
 var (
 	locationCache *time.Location
@@ -35,7 +33,7 @@ var (
 )
 
 // Location は、"Asia/Tokyo" の time.Location を一度だけロードし、そのポインタを返します。
-// これにより、呼び出しごとのファイルシステムへのアクセスを避けます。
+// 二度目以降はキャッシュを返すため、呼び出しごとのファイルシステムへのアクセスは起きません。
 func Location() *time.Location {
 	locationOnce.Do(func() {
 		locationCache = loadLocationOrFallback(locationName)
@@ -54,14 +52,12 @@ func loadLocationOrFallback(name string) *time.Location {
 			slog.String("fallback", "FixedZone (UTC+9)"),
 			slog.Any("error", err),
 		)
-		// FixedZone("JST", 9*60*60) は JST (UTC+9) を表す。
 		return time.FixedZone("JST", 9*60*60)
 	}
 	return loc
 }
 
 // Now は、日本標準時 (JST) における現在の時刻を返します。
-// 例: 2025-11-23 15:00:00 +0900 JST
 func Now() time.Time {
 	return time.Now().In(Location())
 }

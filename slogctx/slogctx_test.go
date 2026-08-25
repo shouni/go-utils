@@ -130,19 +130,16 @@ func TestContextAttrsSurviveWithGroup(t *testing.T) {
 
 // countKey は、出力された JSON にそのキーが何回現れるかを数えます。
 //
-// **重複はマップへ復号した時点で消えます**（後勝ちで 1 つにまとまります）。
-// 検出したいのは重複そのものなので、生の出力を数えます。値に同じ並びが現れると
-// 誤検出しますが、テストの値はこちらで決めているので起きません。
+// 重複はマップへ復号した時点で消える（後勝ちで 1 つにまとまる）ため、生の出力を数えます。
+// 値に同じ並びが現れると誤検出しますが、テストの値はこちらで決めているので起きません。
 func countKey(t *testing.T, out []byte, key string) int {
 	t.Helper()
 	return bytes.Count(out, []byte(`"`+key+`":`))
 }
 
-// ★ 呼び出し側が context と同じキーを渡しても、出力にそのキーが 2 つ並ばないこと。
-//
-// 並んでも JSON としては不正ではないため誰も失敗せず、解釈は取り込む側に委ねられます。
-// Cloud Logging は連結するので job_id が "job-1job-1" になり、**その ID で検索しても
-// 当たりません。** 相関のために載せた属性が相関を壊す、という裏返った結果になります。
+// 呼び出し側が context と同じキーを渡しても、出力にそのキーが 2 つ並ばないこと。
+// 並んでも JSON としては不正ではないため誰も失敗せず、Cloud Logging では連結された
+// job_id ができあがって、その ID での検索に当たらなくなります。
 func TestCallerAttrOverridesContextAttr(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, slog.LevelInfo)
