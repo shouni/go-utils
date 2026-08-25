@@ -63,9 +63,8 @@ func CreatedAt(jobID string) (time.Time, error) {
 // SortKey は、ジョブ ID を作成日時で並べ替えるためのキーを返します。
 // 時刻を取り出せない ID では空文字を返します。
 //
-// ID の文字列比較は、用途ごとに異なるプレフィックスを付けた ID が同じ一覧に混在すると
-// プレフィックス順になってしまいます（時刻部分より前に差が出るため）。
-// go-job-kit の paging.WithSortKey にそのまま渡せます。
+// ID をそのまま文字列比較すると、用途ごとに異なるプレフィックスを付けた ID が同じ一覧に
+// 混在したときにプレフィックス順になってしまいます（時刻部分より前に差が出るため）。
 func SortKey(jobID string) string {
 	t, err := CreatedAt(jobID)
 	if err != nil {

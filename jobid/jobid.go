@@ -48,10 +48,8 @@ func IsValid(jobID string) bool {
 // Sanitize は、パス形式になりうる値を安全なジョブ ID へ正規化します。
 //
 // 外部から受け取った値をストレージパスへ組み込む前に通すことを想定しています。
-// 末尾要素だけを取り出したうえで Validate を通すため、`../../etc/passwd` のような
-// 入力は `passwd` に切り詰められ、形式が不正なら拒否されます。
-// Validate だけでは「不正なら弾く」ことしかできませんが、Sanitize は
-// 前段のルーティングや正規化で付いた余分なパス要素を落としてから判定します。
+// 前段のルーティングや正規化で付いた余分なパス要素を落としてから Validate を通すため、
+// `../../etc/passwd` のような入力は `passwd` に切り詰められ、形式が不正なら拒否されます。
 func Sanitize(jobID string) (string, error) {
 	safe := path.Base(strings.TrimSpace(jobID))
 	if err := Validate(safe); err != nil {
@@ -67,9 +65,8 @@ func Sanitize(jobID string) (string, error) {
 //
 // 辞書順のソートがそのまま新しい順になるのは、一覧に並ぶ ID のプレフィックスが
 // すべて同じ場合に限られます。オブジェクトストレージの一覧はキー順で返るため、
-// その条件を満たすなら別途インデックスを持たずに済みます。用途ごとに異なる
-// プレフィックスを付けた ID が同じ一覧に混在する場合は、時刻より前に差が出るため
-// 並び順がプレフィックス順になります。そのときは SortKey を並べ替えのキーに使ってください。
+// その条件を満たすなら別途インデックスを持たずに済みます。プレフィックスが混在する
+// 一覧では SortKey を並べ替えのキーに使ってください。
 func New(prefix string) (string, error) {
 	return newAt(prefix, time.Now().UTC())
 }

@@ -66,6 +66,12 @@ func attrsFrom(ctx context.Context) []slog.Attr {
 }
 
 // NewHandler は、context に積まれた属性をレコードへ付与するハンドラーで base を包みます。
+//
+// キーが衝突したときの扱いは 2 つです。レコードが既に持っているキーは context から足さず
+// （呼び出し側が渡したその場の値のほうが具体的なため）、context 自身の重複は後から積んだ
+// ほうを残します（With を重ねるのはスコープを内側へ絞る操作のため）。
+// ただし logger.With で足された属性は委譲先が保持していてここからは見えないため、
+// そちらとの衝突は防げません。相関 ID は context に載せてください。
 func NewHandler(base slog.Handler) slog.Handler {
 	return &handler{Handler: base}
 }
@@ -77,19 +83,10 @@ type handler struct {
 
 // Handle は context 由来の属性を足したうえで委譲先のハンドラーへ渡します。
 //
-// レコードが既に持っているキーは足しません。**呼び出し側が渡した値のほうが具体的**
-// だからです（context に載るのはスコープ全体で共通の値で、呼び出し側はその場の値を
-// 渡します）。
-//
-// ★ 落とさずに両方載せると、出力に同じキーが 2 つ並びます。JSON としては不正では
-// ないため誰も失敗せず、**取り込む側の解釈に委ねられます。** Cloud Logging は連結
-// するので、job_id が "job-1job-1" になります。**この形は検索に当たらないので、
-// 失敗したジョブを ID で追えなくなります。**「相関のために載せた属性が、相関を
-// 壊す」という裏返った結果になり、しかも壊れるのは呼び出し側も同じキーを載せた行
-// ——つまり重要な行に偏ります。
-//
-// logger.With で足された属性はここからは見えない（委譲先が保持している）ため、
-// そちらとの衝突は防げません。相関 ID は context に載せてください。
+// 衝突したキーを落とさずに両方載せると、出力に同じキーが 2 つ並びます。JSON としては
+// 不正ではないため誰も失敗せず、解釈は取り込む側任せになります。Cloud Logging は連結する
+// ので job_id が "job-1job-1" となり、その ID で検索しても当たりません。相関のために載せた
+// 属性が相関を壊すうえ、壊れるのは呼び出し側も同じキーを載せた行、つまり重要な行に偏ります。
 func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 	attrs := attrsFrom(ctx)
 	if len(attrs) == 0 {
@@ -102,10 +99,8 @@ func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 		return true
 	})
 
-	// context 自身の重複（同じキーで 2 度 With した場合）も潰します。**残すのは
-	// 後から積んだほうです。** With を重ねるのはスコープを内側へ絞る操作なので、
-	// 内側で上書きしたつもりの値が外側の値に負けると、上書きの手段が無くなります。
-	// 後ろから見て初出だけを拾い、並びは元のまま戻します。
+	// context 自身の重複は後から積んだほうを残すため、後ろから見て初出だけを拾い、
+	// 並びは元のまま戻します。
 	kept := make([]slog.Attr, 0, len(attrs))
 	for i := len(attrs) - 1; i >= 0; i-- {
 		a := attrs[i]
