@@ -81,7 +81,6 @@ func NewHandler(base slog.Handler) slog.Handler {
 	return &handler{Handler: base}
 }
 
-// handler は context 由来の属性をレコードへ付与する slog.Handler です。
 type handler struct {
 	slog.Handler
 }
@@ -108,7 +107,6 @@ func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 	// 並びは元のまま戻します。
 	kept := make([]slog.Attr, 0, len(attrs))
 	for _, a := range slices.Backward(attrs) {
-
 		if _, dup := seen[a.Key]; dup {
 			continue
 		}

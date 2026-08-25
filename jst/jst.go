@@ -72,18 +72,17 @@ func Format(t time.Time, layout string) string {
 	return From(t).Format(layout)
 }
 
-// FormatDisplay は、LayoutDisplay（分精度・タイムゾーン略称つき）で整形します。
-// 履歴一覧など、一覧に並べる時刻の表記を揃えるために使います。
+// FormatDisplay は LayoutDisplay で整形します。履歴一覧など、並べて表示する時刻の
+// 表記を揃えるために使います。
+//
+// Format にレイアウト定数を渡しても同じ結果になりますが、2 つの定数は末尾の扱いが
+// 異なるため取り違えても気づきにくく、名前で選べるようにしています。
 func FormatDisplay(t time.Time) string {
 	return Format(t, LayoutDisplay)
 }
 
-// FormatTimestamp は、LayoutTimestamp（秒精度・"JST" のリテラルつき）で整形します。
-// 通知フッターなど、JST 固定であることを明示したい箇所で使います。
-//
-// Format にレイアウト定数を渡す形でも同じ結果になりますが、2 つの定数は末尾の扱いが
-// 異なる（LayoutDisplay の MST はレイアウト指示子、LayoutTimestamp の JST はリテラル）ため
-// 取り違えても気づきにくく、名前で選べるようにしています。
+// FormatTimestamp は LayoutTimestamp で整形します。通知フッターなど、JST 固定である
+// ことを明示したい箇所で使います。
 func FormatTimestamp(t time.Time) string {
 	return Format(t, LayoutTimestamp)
 }

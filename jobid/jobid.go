@@ -18,14 +18,14 @@ import (
 	"time"
 )
 
-// MaxLength はジョブ ID に許容される最大文字数です。
+// MaxLength はジョブ ID の長さの上限です。
+// 使える文字は ASCII だけなので、文字数とバイト数は一致します。
 const MaxLength = 128
 
-// Validate が返すエラーです。errors.Is で判定できます。
+// Validate と Sanitize が返すエラーです。errors.Is で判定できます。
 //
-// 呼び出し側が「入力が無い」「長すぎる」「文字が不正」を区別できるようにするためのものです。
-// たとえば HTTP のハンドラーではいずれも 400 になりますが、応答メッセージや
-// メトリクスのラベルは分けたいことがあります。
+// HTTP のハンドラーではいずれも 400 になりますが、応答メッセージやメトリクスの
+// ラベルは分けたいことがあるため、種類を残しています。
 var (
 	// ErrEmpty は、ジョブ ID が空（または空白のみ）であることを表します。
 	ErrEmpty = errors.New("job id is required")
@@ -38,14 +38,12 @@ var (
 )
 
 // Validate は、ジョブ ID がルートおよびストレージパスで安全に扱える形式かを検証します。
-//
 // 正当な形式は「英数字で始まり、以降は英数字・ハイフン・アンダースコアのみ」で、
 // 長さは MaxLength 文字までです。
 //
-// 先頭を英数字に限定しているのは、`-` や `_` で始まる値がコマンドライン引数や
-// URL クエリで意図しない解釈をされるのを避けるためです。使用可能な文字を
-// 英数字・ハイフン・アンダースコアに絞ることで、パス区切り (`/`)、親ディレクトリ
-// 参照 (`..`)、URL エンコード文字を構造的に排除しています。
+// 先頭を英数字に限定するのは、`-` や `_` で始まる値がコマンドライン引数や URL クエリで
+// 意図しない解釈をされるのを避けるためです。使える文字を絞ることで、パス区切り (`/`)、
+// 親ディレクトリ参照 (`..`)、URL エンコード文字を構造的に排除しています。
 func Validate(jobID string) error {
 	if jobID == "" {
 		return ErrEmpty
@@ -55,7 +53,7 @@ func Validate(jobID string) error {
 	}
 
 	// 許可する文字はすべて ASCII なので、バイト単位で走査できます。
-	// マルチバイト文字は先頭バイトが許可集合から外れるため、この検査で弾かれます。
+	// マルチバイト文字は先頭バイトが許可集合から外れるため弾かれます。
 	if !isAlphanumeric(jobID[0]) {
 		return fmt.Errorf("%w: %q", ErrInvalidFormat, jobID)
 	}
@@ -80,8 +78,8 @@ func IsValid(jobID string) bool {
 func Sanitize(jobID string) (string, error) {
 	trimmed := strings.TrimSpace(jobID)
 
-	// path.Base は空文字に "." を返すため、先に弾きます。そうしないと
-	// 入力には無い "." がエラーメッセージに現れ、原因を取り違えさせます。
+	// path.Base は空文字に "." を返すため、先に弾きます。入力には無い "." が
+	// エラーメッセージに現れると、原因を取り違えさせます。
 	if trimmed == "" {
 		return "", ErrEmpty
 	}
@@ -134,11 +132,9 @@ func newAt(prefix string, now time.Time) (string, error) {
 // normalizePrefix は、生成される ID が Validate を通るようにプレフィックスを整えます。
 //
 // プレフィックスは呼び出し側が用途を表すために付ける飾りであって、識別子の一意性は
-// 時刻とランダム部分が担保します。そのため使えない文字が混ざっていてもエラーにはせず、
-// 落として生成を続けます（プレフィックスの綴りのために ID 発行が失敗する方が困る）。
-// 長すぎる場合も同じ理由で、エラーにせず maxPrefixLength まで切り詰めます。
-// 切り詰めた結果 ID が MaxLength より短くなることはありますが、一意性は
-// 時刻とランダム部分が担保するため問題になりません。
+// 時刻とランダム部分が担保します。そのため使えない文字が混ざっていても、長すぎても
+// エラーにはせず、落とすか maxPrefixLength まで切り詰めて生成を続けます
+// （プレフィックスの綴りのために ID 発行が失敗する方が困る）。
 func normalizePrefix(prefix string) string {
 	var b strings.Builder
 	for _, r := range strings.ToLower(strings.TrimSpace(prefix)) {
@@ -156,7 +152,7 @@ func normalizePrefix(prefix string) string {
 	}
 
 	// 残るのは ASCII だけなので、バイト単位で切っても文字は壊れません。
-	// 切った位置が区切り文字に当たることがあるため、ここでも末尾を落とします。
+	// 切り口が区切り文字に当たることがあるため、末尾は同じ理由で落とします。
 	if len(normalized) > maxPrefixLength {
 		normalized = strings.TrimRight(normalized[:maxPrefixLength], "_-")
 	}
