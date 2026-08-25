@@ -32,10 +32,10 @@ go get github.com/shouni/go-utils
 
 | パッケージ | 説明 | 主な提供機能 |
 | --- | --- | --- |
-| **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`)、パストラバーサル対策の正規化 (`Sanitize`)、用途プレフィックスと生成時刻を含む ID の採番 (`New`)、埋め込み時刻の復元 (`CreatedAt`) と並べ替えキー (`SortKey`) |
+| **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`) と種類別のエラー (`ErrEmpty`, `ErrTooLong`, `ErrInvalidFormat`)、パストラバーサル対策の正規化 (`Sanitize`)、用途プレフィックスと生成時刻を含む ID の採番 (`New`)、埋め込み時刻の復元 (`CreatedAt`) と並べ替えキー (`SortKey`) |
 | **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。出力フォーマットには関与しません。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) |
-| **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | 現在時刻の取得 (`Now`)、任意の時刻を JST へ変換 (`From`)、整形 (`Format`)、環境非依存のパース (`Parse`)、ロケーション取得 (`Location`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) |
-| **`strlist`** | 設定値として読み込んだ**分割済みの文字列リスト**を整えます。カンマ区切りの分割そのものは設定ライブラリの担当で、その後始末を引き受けます。 | 前後の空白・空要素・重複を落とす正規化 (`Normalize`) |
+| **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | 現在時刻の取得 (`Now`)、任意の時刻を JST へ変換 (`From`)、整形 (`Format`) と定数つきの近道 (`FormatDisplay`, `FormatTimestamp`)、環境非依存のパース (`Parse`)、ロケーション取得 (`Location`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) |
+| **`strlist`** | 設定値として読み込んだ**分割済みの文字列リスト**を整えます。カンマ区切りの分割そのものは設定ライブラリの担当で、その後始末を引き受けます。 | 前後の空白・空要素・重複を落とす正規化 (`Normalize`)、大文字小文字を区別しない正規化 (`NormalizeFold`) |
 
 ## 🚀 クイックスタート (Quick Start)
 
@@ -55,6 +55,17 @@ createdAt, err := jobid.CreatedAt("video-recipe-20260725-150405-a1b2c3d4")
 // 用途プレフィックスが混在する一覧を、作成日時の降順で並べるためのキー
 key := jobid.SortKey("video-recipe-20260725-150405-a1b2c3d4")
 // key => "20260725150405"（時刻を持たない ID では空文字）
+```
+
+検証の失敗は種類ごとに `errors.Is` で判定できます。いずれも HTTP では 400 になりますが、
+応答メッセージやメトリクスのラベルを分けたい場合に使います。
+
+```go
+switch {
+case errors.Is(err, jobid.ErrEmpty):         // 空（または空白のみ）
+case errors.Is(err, jobid.ErrTooLong):       // MaxLength 超過
+case errors.Is(err, jobid.ErrInvalidFormat): // 使えない文字を含む
+}
 ```
 
 ### context を使ったログの相関 (`slogctx`)
@@ -82,6 +93,16 @@ slog.InfoContext(ctx, "phase started", "job_id", "other") // => {"job_id":"other
 同じキーを 2 度積んだ場合は後から積んだほうが残ります。理由は `NewHandler` の
 ドキュメントコメントにあります。ただし `logger.With` で足した属性は委譲先が保持していて
 ここからは見えないため、そちらとの衝突は防げません。相関 ID は context に載せてください。
+
+### 時刻の表示 (`jst`)
+
+```go
+import "github.com/shouni/go-utils/jst"
+
+// 永続化された UTC の時刻を、表示の直前で JST へ変換します
+jst.FormatDisplay(createdAt)   // => "2026-07-25 15:04 JST"   一覧向け（分精度）
+jst.FormatTimestamp(createdAt) // => "2026/07/25 15:04:05 JST" 通知フッター向け（秒精度）
+```
 
 `jobid` / `jst` / `strlist` には `example_test.go`（`go test` で出力まで検証される実行可能な例）があります。詳しい使い方はそちらを参照してください。
 
