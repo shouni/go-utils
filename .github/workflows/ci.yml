@@ -1,8 +1,8 @@
 # 実体は shouni/workflows が持つ。ジョブの構成・govulncheck の起動方法・
 # check-latest を付ける理由は、そちらの README.md「設計の判断」にある。
 #
-# ref は不変のタグで固定する。移動タグ（@v1 の張り替え）にすると Dependabot に
-# 上げるものが無くなり、全消費側が次の実行でいきなり新しい内容を引くため。
+# @v1 は張り替えられる移動タグ。Dependabot はジョブレベルの uses: を更新しないため
+# （実測。詳細は workflows の README）、不変タグで固定しても自動では上がらない。
 name: CI
 
 on:
@@ -20,4 +20,4 @@ permissions:
 
 jobs:
   ci:
-    uses: shouni/workflows/.github/workflows/go-ci.yml@v1.0.0
+    uses: shouni/workflows/.github/workflows/go-ci.yml@v1
