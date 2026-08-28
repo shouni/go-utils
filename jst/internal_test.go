@@ -6,7 +6,7 @@ import (
 )
 
 // TestLoadLocationOrFallback は、Location のロード可否による分岐を確認します。
-// Location() は sync.Once でキャッシュされフォールバック分岐を外部から到達させられないため、
+// Location() は sync.OnceValue でキャッシュされフォールバック分岐を外部から到達させられないため、
 // この内部テストで loadLocationOrFallback を直接検証しています。
 func TestLoadLocationOrFallback(t *testing.T) {
 	tests := []struct {
