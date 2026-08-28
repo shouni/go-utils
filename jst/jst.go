@@ -27,18 +27,14 @@ const locationName = "Asia/Tokyo"
 
 // Location のキャッシュ。パッケージ変数の即時初期化にしないのは、ロード失敗時の警告を
 // 利用側が slog のハンドラーを設定するより前に出力してしまうためです。
-var (
-	locationCache *time.Location
-	locationOnce  sync.Once
-)
+var locationOnce = sync.OnceValue(func() *time.Location {
+	return loadLocationOrFallback(locationName)
+})
 
 // Location は、"Asia/Tokyo" の time.Location を一度だけロードし、そのポインタを返します。
 // 二度目以降はキャッシュを返すため、呼び出しごとのファイルシステムへのアクセスは起きません。
 func Location() *time.Location {
-	locationOnce.Do(func() {
-		locationCache = loadLocationOrFallback(locationName)
-	})
-	return locationCache
+	return locationOnce()
 }
 
 // loadLocationOrFallback は、指定された IANA タイムゾーン名の Location をロードします。

@@ -23,7 +23,7 @@ func TestLocation(t *testing.T) {
 		t.Errorf("Location().String() = %q, want \"Asia/Tokyo\" or \"JST\"", loc1.String())
 	}
 
-	// sync.Once によるキャッシュが効いていれば、ポインタが同一になる。
+	// sync.OnceValue によるキャッシュが効いていれば、ポインタが同一になる。
 	if loc2 := jst.Location(); loc1 != loc2 {
 		t.Error("Location() が呼び出しごとに異なるポインタを返しました。キャッシュされていません")
 	}
