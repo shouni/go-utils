@@ -2,10 +2,13 @@
 
 [![CI](https://github.com/shouni/go-utils/actions/workflows/ci.yml/badge.svg)](https://github.com/shouni/go-utils/actions/workflows/ci.yml)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen)](#)
-[![Language](https://img.shields.io/badge/Language-Go-blue)](https://golang.org/)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/shouni/go-utils)](https://golang.org/)
+[![Language](https://img.shields.io/badge/Language-Go-blue)](https://go.dev/)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/shouni/go-utils)](https://go.dev/)
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-utils)](https://github.com/shouni/go-utils/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shouni/go-utils.svg)](https://pkg.go.dev/github.com/shouni/go-utils)
+
+## 🚀 概要 (About) - 複数プロジェクトで重複していた、標準ライブラリだけの小物
 
 **`Go Utils`** は、複数のプロジェクトで実際に重複していた小さな処理だけを集めたモジュールです。パッケージ同士は独立しているため、必要なものだけをインポートできます。
 
