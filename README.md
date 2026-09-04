@@ -23,14 +23,6 @@
 3. **2つ以上のプロジェクトから使われる** — 単一プロジェクトでしか使わないものは、
    その利用者側の `internal/` に置いてください。汎用に見えても、実際にはそのプロジェクト固有の判断に紐づいていることが多いためです。
 
-## 🛠️ インストール (Installation)
-
-```bash
-go get github.com/shouni/go-utils
-```
-
-インポートはパッケージ単位で行います（例: `import "github.com/shouni/go-utils/jobid"`）。
-
 ## 📦 パッケージ構成 (Package Structure)
 
 | パッケージ | 説明 | 主な提供機能 |
@@ -40,7 +32,10 @@ go get github.com/shouni/go-utils
 | **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | 現在時刻の取得 (`Now`)、任意の時刻を JST へ変換 (`From`)、整形 (`Format`) と定数つきの近道 (`FormatDisplay`, `FormatTimestamp`)、環境非依存のパース (`Parse`)、ロケーション取得 (`Location`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) |
 | **`strlist`** | 設定値として読み込んだ**分割済みの文字列リスト**を整えます。カンマ区切りの分割そのものは設定ライブラリの担当で、その後始末を引き受けます。 | 前後の空白・空要素・重複を落とす正規化 (`Normalize`)、大文字小文字を区別しない正規化 (`NormalizeFold`) |
 
-## 🚀 クイックスタート (Quick Start)
+## 🚦 使い方 (Usage)
+
+`go get github.com/shouni/go-utils` で入れ、インポートはパッケージ単位で行います
+（例: `import "github.com/shouni/go-utils/jobid"`）。
 
 ### ジョブ ID の検証と正規化 (`jobid`)
 
