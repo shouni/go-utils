@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Go Utils (`github.com/shouni/go-utils`) is a Go library (not a service) holding only the small pieces that
 were actually duplicated across several projects: `jobid` (async job identifiers), `jst` (Japan Standard
-Time for display), `slogctx` (a `slog.Handler` that adds attributes carried on the context), and `strlist`
-(normalising configured string lists). The four packages are independent — nothing here imports anything
-else here.
+Time for display), `slogctx` (a `slog.Handler` that adds attributes carried on the context), `strlist`
+(normalising configured string lists), and `paging` (the `PageMeta` shape every listing endpoint returns).
+The five packages are independent — nothing here imports anything else here.
 
 **`go.mod` has no `require`, and there is no exception to that.** A name like `utils` accepts anything, so
 admission is decided by three rules (also in README):
@@ -60,6 +60,17 @@ CI (`.github/workflows/ci.yml`) is a thin caller of the shared
 - **`CreatedAt` still reads two pre-`New` formats** (`c20060102-150405-…` and `20060102150405-…`) because
   old IDs live on in artifact paths. It also rejects timestamps before `minTimestamp` (2000-01-01): random
   hex can produce a run of 14 digits that passes plain range checks.
+
+### `paging`
+
+`PageMeta` used to be defined three times with identical JSON tags — in go-job-kit (GCS listings),
+gcp-kit/jobstatus (Firestore listings) and the M2M client that reads both through one struct — and the
+edge values had already drifted: an empty list gave `total_pages` 0 on one side and 1 on the other,
+page 1 gave `prev_page` 0 vs 1, and `next_page` ran past the end on one side. One template
+(`{{if .PageMeta.TotalPages}}`) was written against the 0 and showed a pager on an empty list once its
+app moved to the other library. `New` is the gcp-kit arithmetic: everything clamped into range,
+`TotalPages` never below 1, so "show the pager" is `TotalPages > 1`, never a zero test. The two libraries
+alias the type (`type PageMeta = paging.PageMeta`) and delegate the math; don't re-grow a local copy.
 
 ### `slogctx`
 

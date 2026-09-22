@@ -30,6 +30,7 @@
 | **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`) と種類別のエラー (`ErrEmpty`, `ErrTooLong`, `ErrInvalidFormat`)、パストラバーサル対策の正規化 (`Sanitize`)、用途プレフィックスと生成時刻を含む ID の採番 (`New`)、埋め込み時刻の復元 (`CreatedAt`) と並べ替えキー (`SortKey`) |
 | **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。出力フォーマットには関与しません。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) |
 | **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | 現在時刻の取得 (`Now`)、任意の時刻を JST へ変換 (`From`)、整形 (`Format`) と定数つきの近道 (`FormatDisplay`, `FormatTimestamp`)、環境非依存のパース (`Parse`)、ロケーション取得 (`Location`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) |
+| **`paging`** | **一覧応答のページメタデータ** (`PageMeta`) と、総件数からの組み立て (`New`)。GCS 系と Firestore 系の一覧が同じ JSON 形を返すための共通の型です。 | 組み立て (`New`)、読み飛ばし件数 (`Offset`)、実際の取得件数への補正 (`WithItemCount`) |
 | **`strlist`** | 設定値として読み込んだ**分割済みの文字列リスト**を整えます。カンマ区切りの分割そのものは設定ライブラリの担当で、その後始末を引き受けます。 | 前後の空白・空要素・重複を落とす正規化 (`Normalize`)、大文字小文字を区別しない正規化 (`NormalizeFold`) |
 
 ## 🚦 使い方 (Usage)
