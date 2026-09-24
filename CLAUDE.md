@@ -32,7 +32,14 @@ go run golang.org/x/exp/cmd/gorelease@latest   # run before tagging
 ```
 
 CI (`.github/workflows/ci.yml`) is a thin caller of the shared
-`shouni/workflows/.github/workflows/go-ci.yml@v1`; no fuzz targets are declared.
+`shouni/workflows/.github/workflows/go-ci.yml@v1`, and declares two fuzz targets:
+`jobid#FuzzSanitize` and `jobid#FuzzCreatedAt`, 60s each. `jobid` is the only package here
+that sits on a security boundary — the IDs it validates go straight into URL paths and
+storage paths — and both functions are hand-written byte scans, which is exactly the shape
+a table test under-covers. `FuzzSanitize` pins that anything `Sanitize` returns passes
+`Validate`, contains no path-ish character, and is idempotent; `FuzzCreatedAt` pins that a
+parsed timestamp is in range, in UTC, and agrees with `SortKey` (the history listing order
+depends on that pair).
 
 ## Package notes and invariants
 

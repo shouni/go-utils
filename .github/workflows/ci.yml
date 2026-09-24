@@ -17,3 +17,8 @@ permissions:
 jobs:
   ci:
     uses: shouni/workflows/.github/workflows/go-ci.yml@v1
+    with:
+      # jobid の検証はセキュリティ境界（URL とストレージのパスに直接載る）。
+      # 手書きのバイト走査なので、表のテストではなく探索で埋める。
+      fuzz-targets: "./jobid#FuzzSanitize ./jobid#FuzzCreatedAt"
+      fuzz-time: 60s
