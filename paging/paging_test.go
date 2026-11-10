@@ -21,17 +21,17 @@ func TestNew(t *testing.T) {
 			want: paging.PageMeta{Page: 3, PerPage: 10, Total: 25, TotalPages: 3, HasPrev: true, HasNext: false, PrevPage: 2, NextPage: 3, From: 21, To: 25},
 		},
 		{
-			// 1 ページ目の prev_page が 0 になると、リンク先が存在しないページになる。
+			// A prev_page of 0 on page 1 would link to a page that does not exist.
 			name: "1 ページ目の PrevPage は 1", page: 1, perPage: 10, total: 25,
 			want: paging.PageMeta{Page: 1, PerPage: 10, Total: 25, TotalPages: 3, HasPrev: false, HasNext: true, PrevPage: 1, NextPage: 2, From: 1, To: 10},
 		},
 		{
-			// 空一覧でも TotalPages は 1。0 だと「1 / 0 ページ」と出る。
+			// TotalPages is 1 even for an empty list; 0 would render "page 1 of 0".
 			name: "空一覧", page: 1, perPage: 10, total: 0,
 			want: paging.PageMeta{Page: 1, PerPage: 10, Total: 0, TotalPages: 1, PrevPage: 1, NextPage: 1},
 		},
 		{
-			// 空一覧に page>1 を渡しても HasPrev が立たない。
+			// Passing page>1 for an empty list does not set HasPrev.
 			name: "空一覧の範囲外ページは 1 へ丸める", page: 5, perPage: 10, total: 0,
 			want: paging.PageMeta{Page: 1, PerPage: 10, Total: 0, TotalPages: 1, PrevPage: 1, NextPage: 1},
 		},

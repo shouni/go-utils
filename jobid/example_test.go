@@ -17,7 +17,7 @@ func ExampleValidate() {
 }
 
 func ExampleSanitize() {
-	// 外部入力に紛れ込んだパス要素を落としてから検証します。
+	// Drop path elements that slipped into external input, then validate.
 	id, err := jobid.Sanitize("../../20260725123456-abcd1234")
 	fmt.Println(id, err)
 	// Output: 20260725123456-abcd1234 <nil>
@@ -32,7 +32,7 @@ func ExampleIsValid() {
 }
 
 func ExampleCreatedAt() {
-	// 採番は UTC なので、戻り値も UTC です。
+	// IDs are minted in UTC, so the result is UTC as well.
 	t, err := jobid.CreatedAt("video-recipe-20260725-150405-a1b2c3d4")
 	if err != nil {
 		fmt.Println("error:", err)
@@ -43,7 +43,7 @@ func ExampleCreatedAt() {
 }
 
 func ExampleCreatedAt_legacyFormats() {
-	// New の導入前に採番された ID も読み取れます。
+	// IDs minted before New existed can be read too.
 	for _, id := range []string{
 		"c20260725-150405-1a2b3c4d",
 		"20260725150405-a1b2c3d4",
@@ -57,7 +57,7 @@ func ExampleCreatedAt_legacyFormats() {
 }
 
 func ExampleSortKey() {
-	// 用途プレフィックスが違う ID を、作成日時の降順で並べます。
+	// Sort IDs with different purpose prefixes newest-first by creation time.
 	ids := []string{"regen-zip-20260725-150405-aa", "recipe-20260726-090000-bb"}
 	sort.Slice(ids, func(i, j int) bool {
 		return jobid.SortKey(ids[i]) > jobid.SortKey(ids[j])

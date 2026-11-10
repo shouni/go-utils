@@ -8,7 +8,7 @@ import (
 	"github.com/shouni/go-utils/jobid"
 )
 
-// want は 2026-08-03 02:41:06 UTC（JST では同日 11:41）です。
+// want is 2026-08-03 02:41:06 UTC (11:41 the same day in JST).
 var want = time.Date(2026, time.August, 3, 2, 41, 6, 0, time.UTC)
 
 func TestCreatedAt(t *testing.T) {
@@ -27,12 +27,12 @@ func TestCreatedAt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := jobid.CreatedAt(tt.jobID)
 			if err != nil {
-				t.Fatalf("CreatedAt(%q) が予期しないエラーを返しました: %v", tt.jobID, err)
+				t.Fatalf("CreatedAt(%q) returned an unexpected error: %v", tt.jobID, err)
 			}
 			if !got.Equal(want) {
 				t.Errorf("CreatedAt(%q) = %v, want %v", tt.jobID, got, want)
 			}
-			// 生成側が UTC で採番するため、戻り値も UTC であること。
+			// The generator mints in UTC, so the result is UTC too.
 			if got.Location() != time.UTC {
 				t.Errorf("CreatedAt(%q).Location() = %v, want UTC", tt.jobID, got.Location())
 			}
@@ -59,43 +59,43 @@ func TestCreatedAt_NoTimestamp(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := jobid.CreatedAt(tt.jobID)
 			if err == nil {
-				t.Fatalf("CreatedAt(%q) がエラーを返しませんでした", tt.jobID)
+				t.Fatalf("CreatedAt(%q) returned no error", tt.jobID)
 			}
 			if !errors.Is(err, jobid.ErrNoTimestamp) {
-				t.Errorf("CreatedAt(%q) のエラーが ErrNoTimestamp をラップしていません: %v", tt.jobID, err)
+				t.Errorf("CreatedAt(%q) error does not wrap ErrNoTimestamp: %v", tt.jobID, err)
 			}
 		})
 	}
 }
 
-// TestCreatedAt_RoundTrip は、New が生成した ID から生成時刻を復元できることを確認します。
-// 生成側の形式を変えたときにここが落ちます。
+// TestCreatedAt_RoundTrip checks that the creation time can be recovered from an ID New generated.
+// It fails when the generated format changes.
 func TestCreatedAt_RoundTrip(t *testing.T) {
 	for _, prefix := range []string{"", "job", "video-recipe", "regen-keyframe"} {
 		before := time.Now().UTC().Truncate(time.Second)
 		id, err := jobid.New(prefix)
 		if err != nil {
-			t.Fatalf("New(%q) が失敗しました: %v", prefix, err)
+			t.Fatalf("New(%q) failed: %v", prefix, err)
 		}
 		after := time.Now().UTC()
 
 		got, err := jobid.CreatedAt(id)
 		if err != nil {
-			t.Fatalf("CreatedAt(%q) が失敗しました: %v", id, err)
+			t.Fatalf("CreatedAt(%q) failed: %v", id, err)
 		}
 		if got.Before(before) || got.After(after) {
-			t.Errorf("CreatedAt(%q) = %v, want %v 以上 %v 以下", id, got, before, after)
+			t.Errorf("CreatedAt(%q) = %v, want between %v and %v", id, got, before, after)
 		}
 	}
 }
 
 func TestSortKey(t *testing.T) {
-	// 形式が異なる ID が混在しても、作成日時の降順に並ぶこと。
+	// IDs of different formats mixed together still sort newest-first by creation time.
 	ids := []string{
 		"recipe-20260803-024106-a1b2c3d4e5f6", // 2026-08-03 02:41:06
 		"20260801120000-a1b2c3d4",             // 2026-08-01 12:00:00
 		"c20260805-093000-1a2b3c4d",           // 2026-08-05 09:30:00
-		"broken-id-without-timestamp",         // 時刻なし
+		"broken-id-without-timestamp",         // no timestamp
 	}
 
 	keys := make([]string, len(ids))
@@ -110,11 +110,11 @@ func TestSortKey(t *testing.T) {
 		}
 	}
 
-	// キーの降順が作成日時の新しい順になり、時刻なしが末尾に回ること。
+	// Descending key order is newest-first, with the timestamp-less ID last.
 	descending := []string{keys[2], keys[0], keys[1], keys[3]}
 	for i := 0; i+1 < len(descending); i++ {
 		if descending[i] <= descending[i+1] {
-			t.Errorf("SortKey の降順が作成日時の新しい順になっていません: %q", descending)
+			t.Errorf("descending SortKey order is not newest-first by creation time: %q", descending)
 			break
 		}
 	}

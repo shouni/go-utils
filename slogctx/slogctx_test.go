@@ -8,12 +8,12 @@ import (
 	"testing"
 )
 
-// newTestLogger は、JSON 出力を buf へ書く context 対応ロガーを返します。
+// newTestLogger returns a context-aware logger that writes JSON output to buf.
 func newTestLogger(buf *bytes.Buffer, level slog.Level) *slog.Logger {
 	return slog.New(NewHandler(slog.NewJSONHandler(buf, &slog.HandlerOptions{Level: level})))
 }
 
-// decodeLines は出力された JSON ログを 1 行ずつマップへ復号します。
+// decodeLines decodes the emitted JSON log, one line at a time, into maps.
 func decodeLines(t *testing.T, buf *bytes.Buffer) []map[string]any {
 	t.Helper()
 
@@ -36,16 +36,16 @@ func TestParseLevel(t *testing.T) {
 	}{
 		{"debug", slog.LevelDebug},
 		{"DEBUG", slog.LevelDebug},
-		// 環境変数は前後に空白が混ざりやすいため、トリムされること。
+		// Environment variables often carry surrounding whitespace, so it is trimmed.
 		{" warn ", slog.LevelWarn},
 		{"WARNING", slog.LevelWarn},
 		{"ERROR", slog.LevelError},
 		{"", slog.LevelInfo},
 		{"nonsense", slog.LevelInfo},
-		// slog が定める相対表記。段階的にログ量を絞るために使えること。
+		// slog's relative notation, usable to narrow log volume step by step.
 		{"INFO+2", slog.LevelInfo + 2},
 		{"error-1", slog.LevelError - 1},
-		// 相対表記の数値部分が壊れている場合も、既定の Info に落ちること。
+		// A broken numeric part in the relative notation also falls back to the default Info.
 		{"INFO+x", slog.LevelInfo},
 	}
 
@@ -71,14 +71,14 @@ func TestWithAddsAttrsToEveryRecord(t *testing.T) {
 		t.Fatalf("entries = %d, want 2", len(entries))
 	}
 	if entries[0]["job_id"] != "job-1" || entries[0]["command"] != "compose" {
-		t.Errorf("entry[0] = %v, want job_id/command を含む", entries[0])
+		t.Errorf("entry[0] = %v, want it to contain job_id/command", entries[0])
 	}
 	if _, ok := entries[1]["job_id"]; ok {
-		t.Errorf("属性を積んでいない context のログに job_id が漏れている: %v", entries[1])
+		t.Errorf("job_id leaked into a log line from a context without attributes: %v", entries[1])
 	}
 }
 
-// 同じ context から分岐した処理同士が互いの属性を汚染しないこと。
+// Work branched from the same context does not pollute each other's attributes.
 func TestWithDoesNotLeakBetweenBranches(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, slog.LevelInfo)
@@ -96,7 +96,7 @@ func TestWithDoesNotLeakBetweenBranches(t *testing.T) {
 	}
 }
 
-// logger.With で包み直したあとも context 由来の属性が消えないこと。
+// Context attributes survive re-wrapping through logger.With.
 func TestContextAttrsSurviveLoggerWith(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, slog.LevelInfo).With("component", "pipeline")
@@ -108,11 +108,11 @@ func TestContextAttrsSurviveLoggerWith(t *testing.T) {
 		t.Fatalf("entries = %d, want 1", len(entries))
 	}
 	if entries[0]["component"] != "pipeline" || entries[0]["job_id"] != "job-1" {
-		t.Errorf("entry = %v, want component/job_id を両方含む", entries[0])
+		t.Errorf("entry = %v, want it to contain both component and job_id", entries[0])
 	}
 }
 
-// WithGroup で包み直したあとも context 由来の属性が消えないこと。
+// Context attributes survive re-wrapping through WithGroup.
 func TestContextAttrsSurviveWithGroup(t *testing.T) {
 	var buf bytes.Buffer
 	base := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
@@ -126,25 +126,26 @@ func TestContextAttrsSurviveWithGroup(t *testing.T) {
 	}
 	group, ok := entries[0]["req"].(map[string]any)
 	if !ok {
-		t.Fatalf("グループ req が出力されていない: %v", entries[0])
+		t.Fatalf("group req was not emitted: %v", entries[0])
 	}
 	if group["job_id"] != "job-1" {
 		t.Errorf("req.job_id = %v, want job-1", group["job_id"])
 	}
 }
 
-// countKey は、出力された JSON にそのキーが何回現れるかを数えます。
+// countKey counts how many times the key appears in the emitted JSON.
 //
-// 重複はマップへ復号した時点で消える（後勝ちで 1 つにまとまる）ため、生の出力を数えます。
-// 値に同じ並びが現れると誤検出しますが、テストの値はこちらで決めているので起きません。
+// Duplicates vanish once decoded into a map (the last one wins), so the raw output is counted.
+// The same sequence appearing in a value would be a false positive, but the tests choose the
+// values, so it does not happen.
 func countKey(t *testing.T, out []byte, key string) int {
 	t.Helper()
 	return bytes.Count(out, []byte(`"`+key+`":`))
 }
 
-// 呼び出し側が context と同じキーを渡しても、出力にそのキーが 2 つ並ばないこと。
-// 並んでも JSON としては不正ではないため誰も失敗せず、取り込む側で壊れます
-// （理由は Handle のコメント）。
+// When the call site passes the same key as the context, the key does not appear twice.
+// Two copies are still valid JSON, so nothing fails, and it breaks on the ingesting side
+// (see the comment on Handle).
 func TestCallerAttrOverridesContextAttr(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, slog.LevelInfo)
@@ -155,7 +156,7 @@ func TestCallerAttrOverridesContextAttr(t *testing.T) {
 	out := append([]byte(nil), buf.Bytes()...)
 	for _, key := range []string{"mode", "job_id"} {
 		if n := countKey(t, out, key); n != 1 {
-			t.Errorf("%s の出現回数 = %d, want 1 (出力: %s)", key, n, out)
+			t.Errorf("occurrences of %s = %d, want 1 (output: %s)", key, n, out)
 		}
 	}
 
@@ -163,20 +164,20 @@ func TestCallerAttrOverridesContextAttr(t *testing.T) {
 	if len(entries) != 1 {
 		t.Fatalf("entries = %d, want 1", len(entries))
 	}
-	// 具体的なほうが勝ちます。context はスコープ共通の値、呼び出し側はその場の値です。
+	// The more specific value wins: the context holds scope-wide values, the call site the value at hand.
 	if entries[0]["mode"] != "novel" {
-		t.Errorf("mode = %v, want novel（呼び出し側の値）", entries[0]["mode"])
+		t.Errorf("mode = %v, want novel (the call site's value)", entries[0]["mode"])
 	}
-	// 衝突していないキーは、これまでどおり context から載ります。
+	// Keys that do not collide still come from the context as before.
 	if entries[0]["job_id"] != "job-1" {
 		t.Errorf("job_id = %v, want job-1", entries[0]["job_id"])
 	}
 }
 
-// 同じキーを 2 度積んだ場合、後から積んだほうが残ること。
+// When the same key is added twice, the one added later wins.
 //
-// With を重ねるのはスコープを内側へ絞る操作なので、内側で上書きしたつもりの値が
-// 外側に負けると、上書きする手段が無くなります。
+// Nesting With narrows the scope inward, so if a value meant to override on the inside lost
+// to the outer one, there would be no way to override it.
 func TestLaterWithWinsOnSameKey(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, slog.LevelInfo)
@@ -186,15 +187,15 @@ func TestLaterWithWinsOnSameKey(t *testing.T) {
 
 	out := append([]byte(nil), buf.Bytes()...)
 	if n := countKey(t, out, "phase"); n != 1 {
-		t.Fatalf("phase の出現回数 = %d, want 1 (出力: %s)", n, out)
+		t.Fatalf("occurrences of phase = %d, want 1 (output: %s)", n, out)
 	}
 	entries := decodeLines(t, &buf)
 	if entries[0]["phase"] != "publish" {
-		t.Errorf("phase = %v, want publish（後から積んだ値）", entries[0]["phase"])
+		t.Errorf("phase = %v, want publish (the value added later)", entries[0]["phase"])
 	}
 }
 
-// 衝突を落としても、残った属性の並びが崩れないこと。
+// Dropping collisions keeps the remaining attributes in order.
 func TestSurvivingContextAttrsKeepOrder(t *testing.T) {
 	var buf bytes.Buffer
 	logger := newTestLogger(&buf, slog.LevelInfo)
@@ -209,11 +210,11 @@ func TestSurvivingContextAttrsKeepOrder(t *testing.T) {
 	out := buf.Bytes()
 	first, second := bytes.Index(out, []byte(`"job_id":`)), bytes.Index(out, []byte(`"command":`))
 	if first < 0 || second < 0 || first > second {
-		t.Errorf("job_id は command より前に出るべきです (出力: %s)", out)
+		t.Errorf("job_id should come before command (output: %s)", out)
 	}
 }
 
-// グループの中でも衝突が潰れること。context 由来の属性もグループへ入るためです。
+// Collisions are collapsed inside a group too, since context attributes also go into the group.
 func TestCallerAttrOverridesContextAttrInsideGroup(t *testing.T) {
 	var buf bytes.Buffer
 	base := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo})
@@ -224,28 +225,28 @@ func TestCallerAttrOverridesContextAttrInsideGroup(t *testing.T) {
 
 	out := append([]byte(nil), buf.Bytes()...)
 	if n := countKey(t, out, "job_id"); n != 1 {
-		t.Fatalf("job_id の出現回数 = %d, want 1 (出力: %s)", n, out)
+		t.Fatalf("occurrences of job_id = %d, want 1 (output: %s)", n, out)
 	}
 	entries := decodeLines(t, &buf)
 	group, ok := entries[0]["req"].(map[string]any)
 	if !ok {
-		t.Fatalf("グループ req が出力されていない: %v", entries[0])
+		t.Fatalf("group req was not emitted: %v", entries[0])
 	}
 	if group["job_id"] != "job-2" {
-		t.Errorf("req.job_id = %v, want job-2（呼び出し側の値）", group["job_id"])
+		t.Errorf("req.job_id = %v, want job-2 (the call site's value)", group["job_id"])
 	}
 }
 
 func TestWithNoAttrsReturnsSameContext(t *testing.T) {
 	ctx := context.Background()
 	if got := With(ctx); got != ctx {
-		t.Error("属性なしの With が別の context を返している")
+		t.Error("With without attributes returned a different context")
 	}
 }
 
 func TestAttrs(t *testing.T) {
 	if got := Attrs(context.Background()); got != nil {
-		t.Errorf("Attrs(空 context) = %v, want nil", got)
+		t.Errorf("Attrs(empty context) = %v, want nil", got)
 	}
 
 	ctx := With(context.Background(), slog.String("job_id", "job-1"))
@@ -254,7 +255,7 @@ func TestAttrs(t *testing.T) {
 		t.Errorf("Attrs() = %v, want [job_id]", attrs)
 	}
 
-	//nolint:staticcheck // nil context を渡しても panic しないことの確認。
+	//nolint:staticcheck // checks that passing a nil context does not panic
 	if got := Attrs(nil); got != nil {
 		t.Errorf("Attrs(nil) = %v, want nil", got)
 	}
@@ -264,6 +265,6 @@ func TestHandlerRespectsLevel(t *testing.T) {
 	var buf bytes.Buffer
 	newTestLogger(&buf, slog.LevelWarn).Info("filtered out")
 	if buf.Len() != 0 {
-		t.Errorf("レベル未満のログが出力された: %s", buf.String())
+		t.Errorf("a log line below the level was emitted: %s", buf.String())
 	}
 }

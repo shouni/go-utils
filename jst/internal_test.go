@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-// TestLoadLocationOrFallback は、Location のロード可否による分岐を確認します。
-// Location() は sync.OnceValue でキャッシュされフォールバック分岐を外部から到達させられないため、
-// この内部テストで loadLocationOrFallback を直接検証しています。
+// TestLoadLocationOrFallback checks both branches: the location loads, or it does not.
+// Location() is cached with sync.OnceValue, so the fallback branch cannot be reached from
+// outside; this internal test exercises loadLocationOrFallback directly.
 func TestLoadLocationOrFallback(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -26,9 +26,9 @@ func TestLoadLocationOrFallback(t *testing.T) {
 				t.Errorf("loadLocationOrFallback(%q).String() = %q, want %q", tt.zone, loc.String(), tt.wantName)
 			}
 
-			// いずれの経路でも UTC+9 であること。
+			// Either path yields UTC+9.
 			if _, offset := time.Now().In(loc).Zone(); offset != 9*60*60 {
-				t.Errorf("loadLocationOrFallback(%q) のオフセット = %d, want %d", tt.zone, offset, 9*60*60)
+				t.Errorf("loadLocationOrFallback(%q) offset = %d, want %d", tt.zone, offset, 9*60*60)
 			}
 		})
 	}

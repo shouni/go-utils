@@ -128,5 +128,13 @@ alias the type (`type PageMeta = paging.PageMeta`) and delegate the math; don't 
   `loadLocationOrFallback`.
 - `jobid`, `jst` and `strlist` carry `example_test.go` with `// Output:` comments, so the examples run as
   tests — keep them deterministic.
-- Doc comments and comments in this repo are Japanese; error strings are English (lowercase, no trailing
-  punctuation). Consumers classify with `errors.Is`, and tests must not assert on message substrings.
+- Consumers classify errors with `errors.Is`, and tests must not assert on message substrings.
+
+## Conventions
+
+- **Comments, doc comments, error/log/panic messages and test assertion messages are English** (moved
+  from Japanese on 2026-11-10; do not mix Japanese back in). Error and log strings follow Go style:
+  lowercase, no trailing punctuation (ST1005). Japanese stays only where it is data: test inputs,
+  example layouts such as `"15時04分"`, and subtest names (`t.Run` / table `name` fields), which are
+  kept for now because renaming them changes `-run` patterns.
+- **`README.md` is English, and `README.ja.md` is its Japanese version.** Update the two together.

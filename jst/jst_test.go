@@ -8,32 +8,32 @@ import (
 	"github.com/shouni/go-utils/jst"
 )
 
-// jstOffset は UTC と JST のオフセット (9時間) です。
+// jstOffset is the offset between UTC and JST (9 hours).
 const jstOffset = 9 * time.Hour
 
-// isJST は、ロケーション名が JST 相当 ("Asia/Tokyo" またはフォールバックの "JST") かを判定します。
+// isJST reports whether a location name means JST ("Asia/Tokyo", or the fallback "JST").
 func isJST(name string) bool {
 	return name == "Asia/Tokyo" || name == "JST"
 }
 
-// TestLocation は、Location() が正しいロケーションを返し、かつキャッシュされることを確認します。
+// TestLocation checks that Location() returns the right location and that it is cached.
 func TestLocation(t *testing.T) {
 	loc1 := jst.Location()
 	if !isJST(loc1.String()) {
 		t.Errorf("Location().String() = %q, want \"Asia/Tokyo\" or \"JST\"", loc1.String())
 	}
 
-	// sync.OnceValue によるキャッシュが効いていれば、ポインタが同一になる。
+	// If the sync.OnceValue cache works, the pointers are identical.
 	if loc2 := jst.Location(); loc1 != loc2 {
-		t.Error("Location() が呼び出しごとに異なるポインタを返しました。キャッシュされていません")
+		t.Error("Location() returned a different pointer on each call; it is not cached")
 	}
 
 	if _, offset := time.Now().In(loc1).Zone(); offset != int(jstOffset.Seconds()) {
-		t.Errorf("Location() のオフセット = %d, want %d", offset, int(jstOffset.Seconds()))
+		t.Errorf("Location() offset = %d, want %d", offset, int(jstOffset.Seconds()))
 	}
 }
 
-// TestNow は、現在時刻が JST (UTC+9) のタイムゾーン情報を持って取得されることを確認します。
+// TestNow checks that the current time is returned with JST (UTC+9) zone information.
 func TestNow(t *testing.T) {
 	now := jst.Now()
 
@@ -42,23 +42,23 @@ func TestNow(t *testing.T) {
 	}
 
 	if _, offset := now.Zone(); offset != int(jstOffset.Seconds()) {
-		t.Errorf("Now() のオフセット = %d, want %d", offset, int(jstOffset.Seconds()))
+		t.Errorf("Now() offset = %d, want %d", offset, int(jstOffset.Seconds()))
 	}
 
-	// 絶対時刻が現在時刻に近いこと (実行速度を考慮し1秒の誤差を許容)。
+	// The absolute time is close to now (a 1-second tolerance allows for execution speed).
 	if diff := time.Since(now); diff > time.Second || diff < -time.Second {
-		t.Errorf("Now() が現在の絶対時刻とずれています。Diff: %v", diff)
+		t.Errorf("Now() is off from the current absolute time, diff: %v", diff)
 	}
 }
 
-// TestFrom は、UTC 時刻を JST へ正しく変換することを確認します。
+// TestFrom checks that a UTC time is converted to JST correctly.
 func TestFrom(t *testing.T) {
 	utc := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
 	want := time.Date(2025, time.January, 1, 9, 0, 0, 0, jst.Location())
 
 	got := jst.From(utc)
 
-	// 絶対時刻が変わっていないこと。
+	// The absolute time is unchanged.
 	if !got.Equal(want) {
 		t.Errorf("From(%v) = %v, want %v", utc, got, want)
 	}
@@ -67,7 +67,7 @@ func TestFrom(t *testing.T) {
 	}
 }
 
-// TestFormat は、JST へ変換した上で指定レイアウトに整形されることを確認します。
+// TestFormat checks that the time is converted to JST and then formatted with the given layout.
 func TestFormat(t *testing.T) {
 	utc := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
 
@@ -90,11 +90,11 @@ func TestFormat(t *testing.T) {
 	}
 }
 
-// TestParse は、タイムゾーン情報を含まない文字列が JST として解釈されることを確認します。
+// TestParse checks that a string without time zone information is interpreted as JST.
 func TestParse(t *testing.T) {
 	got, err := jst.Parse("2025-01-01 18:30", "2006-01-02 15:04")
 	if err != nil {
-		t.Fatalf("Parse() が予期しないエラーを返しました: %v", err)
+		t.Fatalf("Parse() returned an unexpected error: %v", err)
 	}
 
 	want := time.Date(2025, time.January, 1, 18, 30, 0, 0, jst.Location())
@@ -102,27 +102,27 @@ func TestParse(t *testing.T) {
 		t.Errorf("Parse() = %v, want %v", got, want)
 	}
 
-	// ホストの time.Local に依存せず、必ず UTC+9 として解釈されること。
+	// It is always interpreted as UTC+9, independent of the host's time.Local.
 	if _, offset := got.Zone(); offset != int(jstOffset.Seconds()) {
-		t.Errorf("Parse() のオフセット = %d, want %d", offset, int(jstOffset.Seconds()))
+		t.Errorf("Parse() offset = %d, want %d", offset, int(jstOffset.Seconds()))
 	}
 }
 
-// TestParse_Invalid は、不正な入力に対してエラーを返し、元のエラーをラップすることを確認します。
+// TestParse_Invalid checks that invalid input returns an error that wraps the original error.
 func TestParse_Invalid(t *testing.T) {
 	_, err := jst.Parse("25:00", "15:04")
 	if err == nil {
-		t.Fatal("Parse() が不正な入力に対してエラーを返しませんでした")
+		t.Fatal("Parse() returned no error for invalid input")
 	}
 
-	// %w でラップされ、time.ParseError を取り出せること。
+	// It is wrapped with %w, so the time.ParseError can be extracted.
 	if _, ok := errors.AsType[*time.ParseError](err); !ok {
-		t.Errorf("Parse() のエラーが *time.ParseError をラップしていません: %v", err)
+		t.Errorf("Parse() error does not wrap *time.ParseError: %v", err)
 	}
 }
 
-// TestFormatDisplayAndTimestamp は、それぞれが対応するレイアウト定数へ委譲することを
-// 確認します。定数ごとの出力そのものは TestFormat が確認しています。
+// TestFormatDisplayAndTimestamp checks that each delegates to its layout constant.
+// The output of each constant itself is checked by TestFormat.
 func TestFormatDisplayAndTimestamp(t *testing.T) {
 	utcTime := time.Date(2026, time.July, 25, 6, 4, 5, 0, time.UTC)
 

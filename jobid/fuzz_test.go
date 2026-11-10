@@ -6,12 +6,13 @@ import (
 	"time"
 )
 
-// FuzzSanitize は、Sanitize が返す値が必ず Validate を通ることを確かめます。
+// FuzzSanitize checks that whatever Sanitize returns always passes Validate.
 //
-// 検証はセキュリティ境界です。ジョブ ID は URL のパスにもストレージのパスにも現れ、
-// Sanitize は外部から来た値をそこへ組み込む前の最後の関門です。ここが「不正なのに
-// 通った」を一度でも許すと、パス区切りや親ディレクトリ参照がそのまま下流へ渡ります。
-// 表のテストは思いついた形しか試せないので、探索で埋めます。
+// Validation is a security boundary. Job IDs appear in URL paths and storage paths, and
+// Sanitize is the last gate before a value from outside is built into them. If it ever lets
+// "invalid but accepted" through, path separators and parent directory references flow
+// straight downstream. A table test only tries the shapes someone thought of, so fuzzing
+// fills the rest.
 func FuzzSanitize(f *testing.F) {
 	seeds := []string{
 		"20260725123456-abcd1234",
@@ -44,13 +45,13 @@ func FuzzSanitize(f *testing.F) {
 			return
 		}
 
-		// 成功したなら、その値は必ず Validate を通る。
+		// On success the value always passes Validate.
 		if err := Validate(safe); err != nil {
 			t.Fatalf("Sanitize(%q) = %q, which Validate rejects: %v", raw, safe, err)
 		}
 
-		// 危険な形が残っていないこと。Validate の文字集合から導かれる帰結だが、
-		// 境界そのものなので直接も確かめる。
+		// No dangerous shape remains. This follows from Validate's character set,
+		// but it is the boundary itself, so check it directly as well.
 		if strings.ContainsAny(safe, `/\.%`+"\x00") || strings.TrimSpace(safe) != safe {
 			t.Fatalf("Sanitize(%q) = %q, which is not path-safe", raw, safe)
 		}
@@ -58,7 +59,7 @@ func FuzzSanitize(f *testing.F) {
 			t.Fatalf("Sanitize(%q) = %q (%d bytes), over MaxLength", raw, safe, len(safe))
 		}
 
-		// 冪等であること。通った値をもう一度通しても変わらない。
+		// Idempotent: passing an accepted value through again leaves it unchanged.
 		again, err := Sanitize(safe)
 		if err != nil || again != safe {
 			t.Fatalf("Sanitize is not idempotent: %q -> %q -> (%q, %v)", raw, safe, again, err)
@@ -66,12 +67,12 @@ func FuzzSanitize(f *testing.F) {
 	})
 }
 
-// FuzzCreatedAt は、CreatedAt が成功したときの時刻が妥当で、SortKey と一致することを
-// 確かめます。
+// FuzzCreatedAt checks that a time CreatedAt returns on success is plausible and agrees
+// with SortKey.
 //
-// 解析対象は「過去に採番されて今もストレージに残っている 3 つの形式」で、ハイフンで
-// 割った要素を前から舐めるという手書きの走査です。一覧の並びはこの戻り値で決まるため、
-// 取り違えると履歴の順序が静かに崩れます。
+// What it parses is "the three formats minted in the past that still remain in storage",
+// using a hand-written scan over the hyphen-separated elements from the front. Listing order
+// is decided by this result, so a misparse silently breaks the history order.
 func FuzzCreatedAt(f *testing.F) {
 	seeds := []string{
 		"20260725123456-abcd1234",
@@ -100,14 +101,14 @@ func FuzzCreatedAt(f *testing.F) {
 			return
 		}
 
-		// 採番が始まる前の時刻は、解析の取り違えとしてしか出てこない。
+		// A time before minting began can only come from a misparse.
 		if got.Before(time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)) {
 			t.Fatalf("CreatedAt(%q) = %v, before the minimum", raw, got)
 		}
 		if got.Location() != time.UTC {
 			t.Fatalf("CreatedAt(%q) = %v, want UTC", raw, got)
 		}
-		// 並べ替えキーは同じ時刻から導かれる。
+		// The sort key is derived from the same time.
 		if want := got.Format(timestampLayout); key != want {
 			t.Fatalf("SortKey(%q) = %q, want %q", raw, key, want)
 		}

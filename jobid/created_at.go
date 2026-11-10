@@ -7,47 +7,47 @@ import (
 	"time"
 )
 
-// ErrNoTimestamp は、ジョブ ID から生成時刻を取り出せなかったことを表します。
-// errors.Is で判定できます。
+// ErrNoTimestamp reports that no creation time could be extracted from a job ID.
+// Classify it with errors.Is.
 var ErrNoTimestamp = errors.New("job id has no embedded timestamp")
 
-// timestampLayout はジョブ ID に埋め込まれる時刻の形式です。
+// timestampLayout is the format of the time embedded in a job ID.
 const timestampLayout = "20060102150405"
 
-// minTimestamp は、埋め込み時刻として妥当とみなす下限です。
+// minTimestamp is the earliest time accepted as an embedded timestamp.
 //
-// ジョブ ID には乱数由来の数字列が含まれるため、たまたま 14 桁の数字が並ぶことがあります。
-// 月日や時分秒の範囲検査だけでは "0241-06-12 03:45:06" のような値を弾けないため、
-// 現実にジョブが存在しえない時刻を除外します。
+// A job ID contains digits from random data, which can happen to form a run of 14 digits.
+// Range checks on month, day, hour, minute and second alone cannot reject a value such as
+// "0241-06-12 03:45:06", so times at which no job could have existed are excluded.
 var minTimestamp = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-// CreatedAt は、ジョブ ID に埋め込まれた生成時刻を UTC で返します。
+// CreatedAt returns the creation time embedded in a job ID, in UTC.
 //
-// 生成側（New）が UTC で採番するため、戻り値も UTC です。画面表示に使う場合は
-// go-utils/jst で JST へ変換してください。
+// The generator (New) mints IDs in UTC, so the result is UTC as well. To show it on
+// screen, convert it to JST with go-utils/jst.
 //
-// New が生成する形式に加えて、New の導入前に各サービスが独自採番していた形式も
-// 読み取れます。ジョブ ID はオブジェクトストレージ上の成果物のパスに使われており、
-// 過去に採番された ID が残り続けるためです。対応する形式は次の 3 つです。
+// Besides the format New generates, it also reads the formats each service minted on its
+// own before New existed: job IDs are used in the paths of artifacts in object storage,
+// so IDs minted in the past live on. The three supported formats are:
 //
-//	{prefix}-20060102-150405-{乱数}   New が生成する形式（prefix にハイフンを含んでよい）
-//	c20060102-150405-{乱数}           プレフィックスが日付に直結する形式
-//	20060102150405-{乱数}             日付と時刻が分割されない形式
+//	{prefix}-20060102-150405-{random}   the format New generates (prefix may contain hyphens)
+//	c20060102-150405-{random}           a prefix attached directly to the date
+//	20060102150405-{random}             date and time not separated
 //
-// 時刻を取り出せない場合は ErrNoTimestamp をラップしたエラーを返します。
-// 検証は行わないため、必要なら Validate と併用してください。
+// When no time can be extracted, it returns an error wrapping ErrNoTimestamp.
+// It does not validate the ID; combine it with Validate if needed.
 func CreatedAt(jobID string) (time.Time, error) {
 	parts := strings.Split(jobID, "-")
 
-	// 先頭側の要素を優先して走査し、最初に妥当と判定できた時刻を採用します。
+	// Scan from the front and adopt the first time that parses as valid.
 	for i, part := range parts {
-		// 日付と時刻が分割されていない形式。
+		// Date and time not separated.
 		if t, ok := parseTimestamp(trimLeadingNonDigits(part)); ok {
 			return t, nil
 		}
 
-		// 日付 (8 桁) と時刻 (6 桁) がハイフンで分かれている形式。
-		// 先頭要素の非数字は "c20260803" のようなプレフィックス直結を吸収するために落とします。
+		// Date (8 digits) and time (6 digits) separated by a hyphen.
+		// Leading non-digits are dropped to absorb a prefix attached directly, as in "c20260803".
 		if i+1 < len(parts) {
 			if date := trimLeadingNonDigits(part); len(date) == 8 && len(parts[i+1]) == 6 {
 				if t, ok := parseTimestamp(date + parts[i+1]); ok {
@@ -60,11 +60,11 @@ func CreatedAt(jobID string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("%w: %q", ErrNoTimestamp, jobID)
 }
 
-// SortKey は、ジョブ ID を作成日時で並べ替えるためのキーを返します。
-// 時刻を取り出せない ID では空文字を返します。
+// SortKey returns a key for sorting job IDs by creation time.
+// It returns an empty string for an ID with no extractable time.
 //
-// ID をそのまま文字列比較すると、用途ごとに異なるプレフィックスを付けた ID が同じ一覧に
-// 混在したときにプレフィックス順になってしまいます（時刻部分より前に差が出るため）。
+// Comparing IDs as plain strings sorts by prefix when IDs with different per-purpose
+// prefixes share one list (they differ before the time part is reached).
 func SortKey(jobID string) string {
 	t, err := CreatedAt(jobID)
 	if err != nil {
@@ -73,7 +73,7 @@ func SortKey(jobID string) string {
 	return t.Format(timestampLayout)
 }
 
-// parseTimestamp は 14 桁の数字列を UTC の時刻として解釈します。
+// parseTimestamp interprets a 14-digit string as a time in UTC.
 func parseTimestamp(value string) (time.Time, bool) {
 	if len(value) != len(timestampLayout) || !isDigits(value) {
 		return time.Time{}, false
@@ -85,7 +85,7 @@ func parseTimestamp(value string) (time.Time, bool) {
 	return t, true
 }
 
-// trimLeadingNonDigits は、先頭に付いた数字以外の文字を取り除きます。
+// trimLeadingNonDigits removes any non-digit characters at the start.
 func trimLeadingNonDigits(value string) string {
 	return strings.TrimLeftFunc(value, func(r rune) bool {
 		return r < '0' || r > '9'

@@ -19,13 +19,13 @@ func TestNormalize(t *testing.T) {
 			expected: []string{"apple", "banana", "cherry"},
 		},
 		{
-			// 設定ライブラリの分割は前後の空白を落としません。
+			// Splitting in the configuration library does not trim whitespace.
 			name:     "要素の前後の空白を落とす",
 			input:    []string{"  apple  ", "banana", "  cherry "},
 			expected: []string{"apple", "banana", "cherry"},
 		},
 		{
-			// 値の末尾や連続したカンマから生まれます。
+			// These come from a trailing comma or consecutive commas.
 			name:     "空要素を捨てる",
 			input:    []string{"", "apple", "", "banana", ""},
 			expected: []string{"apple", "banana"},
@@ -36,7 +36,7 @@ func TestNormalize(t *testing.T) {
 			expected: []string{"apple"},
 		},
 		{
-			// トリム後に同じになる要素も重複として扱います。
+			// Elements that become equal after trimming count as duplicates too.
 			name:     "重複を捨て、最初に現れた順序を保つ",
 			input:    []string{"banana", "apple", " banana ", "cherry", "apple"},
 			expected: []string{"banana", "apple", "cherry"},
@@ -63,14 +63,14 @@ func TestNormalize(t *testing.T) {
 			actual := strlist.Normalize(tt.input)
 
 			if !reflect.DeepEqual(actual, tt.expected) {
-				t.Errorf("Normalize(%q) = %v, 期待値 %v", tt.input, actual, tt.expected)
+				t.Errorf("Normalize(%q) = %v, want %v", tt.input, actual, tt.expected)
 			}
 		})
 	}
 }
 
-// 入力スライスを書き換えないこと。設定の生値をログに出す用途などで、
-// 呼び出し側が元の値を保持している場合があります。
+// The input slice is not modified. The caller may keep the original values, for example to
+// log the raw setting.
 func TestNormalizeDoesNotMutateInput(t *testing.T) {
 	input := []string{" a ", "", "a", "b"}
 	want := []string{" a ", "", "a", "b"}
@@ -78,11 +78,11 @@ func TestNormalizeDoesNotMutateInput(t *testing.T) {
 	strlist.Normalize(input)
 
 	if !reflect.DeepEqual(input, want) {
-		t.Errorf("入力が書き換えられました: %v, want %v", input, want)
+		t.Errorf("input was modified: %v, want %v", input, want)
 	}
 }
 
-// 大文字小文字の違いを重複とみなし、小文字化して返すこと。
+// Case differences count as duplicates, and the result is lowercased.
 func TestNormalizeFold(t *testing.T) {
 	got := strlist.NormalizeFold([]string{"Example.com", " EXAMPLE.com ", "", "Other.example"})
 	want := []string{"example.com", "other.example"}
@@ -97,7 +97,7 @@ func TestNormalizeFold(t *testing.T) {
 	}
 }
 
-// Normalize は大文字小文字を区別したままであること（NormalizeFold との違い）。
+// Normalize stays case-sensitive (the difference from NormalizeFold).
 func TestNormalizeKeepsCase(t *testing.T) {
 	got := strlist.Normalize([]string{"Example.com", "example.com"})
 	if len(got) != 2 {
