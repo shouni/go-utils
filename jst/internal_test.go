@@ -14,8 +14,8 @@ func TestLoadLocationOrFallback(t *testing.T) {
 		zone     string
 		wantName string
 	}{
-		{"有効なタイムゾーン名はそのままロードされる", locationName, locationName},
-		{"不正なタイムゾーン名は FixedZone にフォールバックする", "Not/A/Real/Zone", "JST"},
+		{"valid zone name loads as is", locationName, locationName},
+		{"invalid zone name falls back to FixedZone", "Not/A/Real/Zone", "JST"},
 	}
 
 	for _, tt := range tests {

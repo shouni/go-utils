@@ -16,11 +16,11 @@ func TestCreatedAt(t *testing.T) {
 		name  string
 		jobID string
 	}{
-		{"New が生成する形式", "recipe-20260803-024106-a1b2c3d4e5f6"},
-		{"プレフィックスにハイフンを含む形式", "video-recipe-20260803-024106-a1b2c3d4e5f6"},
-		{"プレフィックスが日付に直結する形式", "c20260803-024106-1a2b3c4d"},
-		{"日付と時刻が分割されない形式", "20260803024106-a1b2c3d4"},
-		{"乱数部が数字のみでも時刻部を優先する", "recipe-20260803-024106-123456789012"},
+		{"format produced by New", "recipe-20260803-024106-a1b2c3d4e5f6"},
+		{"prefix containing hyphen", "video-recipe-20260803-024106-a1b2c3d4e5f6"},
+		{"prefix joined to date", "c20260803-024106-1a2b3c4d"},
+		{"date and time not split", "20260803024106-a1b2c3d4"},
+		{"timestamp wins over all-digit random part", "recipe-20260803-024106-123456789012"},
 	}
 
 	for _, tt := range tests {
@@ -45,14 +45,14 @@ func TestCreatedAt_NoTimestamp(t *testing.T) {
 		name  string
 		jobID string
 	}{
-		{"空文字", ""},
-		{"時刻を含まない", "recipe-abcdef"},
-		{"桁数が足りない", "recipe-2026080-024106-abcd"},
-		{"月日が範囲外", "recipe-20261345-024106-abcd"},
-		{"時刻が範囲外", "recipe-20260803-254106-abcd"},
-		{"日付として妥当でも下限より前なら乱数の偶然とみなす", "recipe-19990101-000000-abcd"},
-		{"分割されない形式でも下限を適用する", "19991231235959-abcd"},
-		{"ハイフンなしの乱数のみ", "abcdefghijklmn"},
+		{"empty string", ""},
+		{"no timestamp", "recipe-abcdef"},
+		{"too few digits", "recipe-2026080-024106-abcd"},
+		{"month or day out of range", "recipe-20261345-024106-abcd"},
+		{"time out of range", "recipe-20260803-254106-abcd"},
+		{"valid date before floor is random chance", "recipe-19990101-000000-abcd"},
+		{"floor applies to unsplit format", "19991231235959-abcd"},
+		{"random only without hyphen", "abcdefghijklmn"},
 	}
 
 	for _, tt := range tests {

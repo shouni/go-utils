@@ -134,7 +134,7 @@ alias the type (`type PageMeta = paging.PageMeta`) and delegate the math; don't 
 
 - **Comments, doc comments, error/log/panic messages and test assertion messages are English** (moved
   from Japanese on 2026-11-10; do not mix Japanese back in). Error and log strings follow Go style:
-  lowercase, no trailing punctuation (ST1005). Japanese stays only where it is data: test inputs,
-  example layouts such as `"15時04分"`, and subtest names (`t.Run` / table `name` fields), which are
-  kept for now because renaming them changes `-run` patterns.
+  lowercase, no trailing punctuation (ST1005). Subtest names (`t.Run` / table `name` fields) are
+  English too (moved 2026-11-10). Japanese stays only where it is data: test inputs and example
+  layouts such as `"15時04分"`.
 - **`README.md` is English, and `README.ja.md` is its Japanese version.** Update the two together.

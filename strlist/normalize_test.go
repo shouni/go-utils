@@ -14,45 +14,45 @@ func TestNormalize(t *testing.T) {
 		expected []string
 	}{
 		{
-			name:     "整った入力はそのまま",
+			name:     "clean input unchanged",
 			input:    []string{"apple", "banana", "cherry"},
 			expected: []string{"apple", "banana", "cherry"},
 		},
 		{
 			// Splitting in the configuration library does not trim whitespace.
-			name:     "要素の前後の空白を落とす",
+			name:     "trims surrounding spaces",
 			input:    []string{"  apple  ", "banana", "  cherry "},
 			expected: []string{"apple", "banana", "cherry"},
 		},
 		{
 			// These come from a trailing comma or consecutive commas.
-			name:     "空要素を捨てる",
+			name:     "drops empty elements",
 			input:    []string{"", "apple", "", "banana", ""},
 			expected: []string{"apple", "banana"},
 		},
 		{
-			name:     "空白のみの要素も捨てる",
+			name:     "drops whitespace-only elements",
 			input:    []string{" ", "apple", "   "},
 			expected: []string{"apple"},
 		},
 		{
 			// Elements that become equal after trimming count as duplicates too.
-			name:     "重複を捨て、最初に現れた順序を保つ",
+			name:     "drops duplicates keeping first order",
 			input:    []string{"banana", "apple", " banana ", "cherry", "apple"},
 			expected: []string{"banana", "apple", "cherry"},
 		},
 		{
-			name:     "空スライスは空スライス",
+			name:     "empty slice stays empty",
 			input:    []string{},
 			expected: []string{},
 		},
 		{
-			name:     "nil は空スライス",
+			name:     "nil becomes empty slice",
 			input:    nil,
 			expected: []string{},
 		},
 		{
-			name:     "すべて空または空白なら空スライス",
+			name:     "all blank becomes empty slice",
 			input:    []string{" ", "", "  "},
 			expected: []string{},
 		},

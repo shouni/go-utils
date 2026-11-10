@@ -76,7 +76,7 @@ func TestFormat(t *testing.T) {
 		layout string
 		want   string
 	}{
-		{"任意のレイアウト", "2006/01/02 15:04", "2025/01/01 09:00"},
+		{"custom layout", "2006/01/02 15:04", "2025/01/01 09:00"},
 		{"LayoutDisplay", jst.LayoutDisplay, "2025-01-01 09:00 JST"},
 		{"LayoutTimestamp", jst.LayoutTimestamp, "2025/01/01 09:00:00 JST"},
 	}
