@@ -11,8 +11,8 @@ func TestValidate(t *testing.T) {
 	t.Parallel()
 
 	valid := []string{
-		"20260725123456-abcd1234",               // ap-comp が生成する形式
-		"video-recipe-20260725-150405-a1b2c3d4", // ap-mv が生成する形式
+		"20260725123456-abcd1234",               // legacy unprefixed format
+		"video-recipe-20260725-150405-a1b2c3d4", // prefix containing a hyphen
 		"job_with_underscores",
 		"a",
 		strings.Repeat("a", MaxLength),
@@ -23,22 +23,22 @@ func TestValidate(t *testing.T) {
 		}
 	}
 
-	// 呼び出し側がエラーの種類で分岐できるよう、期待するエラーまで確認します。
+	// Check the expected error too, so callers can branch on the kind of error.
 	invalid := []struct {
 		reason string
 		id     string
 		want   error
 	}{
-		{"空文字", "", ErrEmpty},
-		{"先頭がハイフン", "-leading-hyphen", ErrInvalidFormat},
-		{"先頭がアンダースコア", "_leading_underscore", ErrInvalidFormat},
-		{"パス区切りを含む", "has/slash", ErrInvalidFormat},
-		{"親ディレクトリ参照", "..", ErrInvalidFormat},
-		{"パストラバーサル", "../etc/passwd", ErrInvalidFormat},
-		{"空白を含む", "has space", ErrInvalidFormat},
-		{"ドットを含む", "has.dot", ErrInvalidFormat},
-		{"非 ASCII", "日本語", ErrInvalidFormat},
-		{"長さ上限超過", strings.Repeat("a", MaxLength+1), ErrTooLong},
+		{"empty", "", ErrEmpty},
+		{"leading hyphen", "-leading-hyphen", ErrInvalidFormat},
+		{"leading underscore", "_leading_underscore", ErrInvalidFormat},
+		{"contains a path separator", "has/slash", ErrInvalidFormat},
+		{"parent directory reference", "..", ErrInvalidFormat},
+		{"path traversal", "../etc/passwd", ErrInvalidFormat},
+		{"contains a space", "has space", ErrInvalidFormat},
+		{"contains a dot", "has.dot", ErrInvalidFormat},
+		{"non-ASCII", "日本語", ErrInvalidFormat},
+		{"over the length limit", strings.Repeat("a", MaxLength+1), ErrTooLong},
 	}
 	for _, tt := range invalid {
 		if err := Validate(tt.id); !errors.Is(err, tt.want) {
@@ -68,7 +68,7 @@ func TestSanitize(t *testing.T) {
 	}
 }
 
-// 末尾要素を取り出しても形式が不正なものは拒否すること。
+// Input whose last element is still malformed is rejected.
 func TestSanitizeRejectsInvalidBase(t *testing.T) {
 	t.Parallel()
 
@@ -79,8 +79,8 @@ func TestSanitizeRejectsInvalidBase(t *testing.T) {
 	}
 }
 
-// Sanitize は末尾要素のみを取り出すため、末尾スラッシュは無視されます
-// （path.Base の挙動）。ディレクトリ風の入力でも最後の要素が正当なら通ります。
+// Sanitize keeps only the last element, so a trailing slash is ignored
+// (path.Base behaviour). Directory-like input passes if its last element is valid.
 func TestSanitizeUsesLastPathElement(t *testing.T) {
 	t.Parallel()
 
@@ -124,8 +124,8 @@ func TestNewIsUnique(t *testing.T) {
 	}
 }
 
-// 生成時刻を先頭に含めるため、辞書順のソートが新しい順の並びと一致すること。
-// ストレージのキー順一覧をそのまま履歴の並びとして使えることを担保します。
+// The creation time comes first, so lexicographic order matches newest-first order.
+// This guarantees that a key-ordered storage listing can serve as the history order as is.
 func TestNewIsLexicographicallySortable(t *testing.T) {
 	t.Parallel()
 
@@ -144,7 +144,7 @@ func TestNewIsLexicographicallySortable(t *testing.T) {
 	}
 }
 
-// プレフィックスの綴りで ID 発行が失敗しないこと。
+// Issuing an ID never fails over the spelling of the prefix.
 func TestNewNormalizesPrefix(t *testing.T) {
 	t.Parallel()
 
@@ -182,7 +182,7 @@ func TestIsValid(t *testing.T) {
 	}
 }
 
-// 空入力は path.Base が返す "." ではなく、入力そのものを表すエラーになること。
+// Empty input yields an error describing the input itself, not the "." that path.Base returns.
 func TestSanitizeEmptyReportsMissingInput(t *testing.T) {
 	t.Parallel()
 
@@ -197,7 +197,7 @@ func TestSanitizeEmptyReportsMissingInput(t *testing.T) {
 	}
 }
 
-// プレフィックスが長すぎても ID 発行は失敗せず、切り詰められること。
+// A prefix that is too long is truncated rather than failing ID issuance.
 func TestNewTruncatesLongPrefix(t *testing.T) {
 	t.Parallel()
 
@@ -213,7 +213,7 @@ func TestNewTruncatesLongPrefix(t *testing.T) {
 	}
 }
 
-// New が区切りのハイフンを付けるため、プレフィックス末尾の区切り文字が二重にならないこと。
+// New adds the separating hyphen, so a trailing separator on the prefix is not doubled.
 func TestNewTrimsTrailingSeparatorInPrefix(t *testing.T) {
 	t.Parallel()
 

@@ -1,16 +1,17 @@
-// Package paging は、一覧画面がページネーションを描画するためのメタデータを組み立てます。
+// Package paging builds the metadata a listing page needs to render pagination.
 //
-// 置き場所がここなのは、同じ JSON 形の PageMeta が GCS 系の一覧（go-job-kit）と
-// Firestore 系の一覧（gcp-kit/jobstatus）の両方から返り、それを 1 つの型で受ける
-// M2M クライアントがあるためです。定義が 2 つあると端の値（空一覧の total_pages、
-// 1 ページ目の prev_page）が別々に育ち、同じ契約のはずの応答がサービスごとに変わります。
-// 一覧の読み込みそのものは扱いません。
+// It lives here because a PageMeta of the same JSON shape is returned both by GCS-backed
+// listings (go-job-kit) and by Firestore-backed listings (gcp-kit/jobstatus), and an M2M
+// client receives both through one type. With two definitions the edge values (total_pages
+// for an empty list, prev_page on page 1) evolve separately, and responses that should share
+// one contract differ from service to service.
+// Reading the listing itself is out of scope.
 package paging
 
-// PageMeta は、一覧画面がページネーションを描画するために必要なメタデータです。
+// PageMeta is the metadata a listing page needs to render pagination.
 //
-// JSON タグは各サービスが返している既存のレスポンスと同じ形です。画面と M2M
-// クライアントの双方が依存しているため、変更するときは利用側の追随が要ります。
+// The JSON tags match the existing responses each service returns. Both pages and M2M
+// clients depend on them, so changing them requires consumers to follow.
 type PageMeta struct {
 	Page       int  `json:"page"`
 	PerPage    int  `json:"per_page"`
@@ -24,16 +25,16 @@ type PageMeta struct {
 	To         int  `json:"to"`
 }
 
-// New は、総件数から 1 ページ分のメタデータを組み立てます。
+// New builds the metadata for one page from the total item count.
 //
-// ページ番号は 1 始まりです。perPage が 0 以下のときはページングせず全件を 1 ページと
-// して扱い、PerPage には total を入れます。範囲外のページは最終ページへ丸めます
-// （一覧の途中でジョブが削除され、見ていたページが消えることがあるためです）。
+// Page numbers start at 1. When perPage is 0 or less, nothing is paged: all items form one
+// page and PerPage is set to total. An out-of-range page is clamped to the last page
+// (jobs can be deleted while a listing is being browsed, and the page being viewed can vanish).
 //
-// 値はすべて範囲内に収めます。TotalPages は空一覧でも 1、PrevPage と NextPage は
-// 1 以上 TotalPages 以下です。テンプレートは HasPrev / HasNext で表示を切り替え、
-// PrevPage / NextPage はリンク先にだけ使う前提です。ページャを出すかどうかは
-// TotalPages が 0 かどうかではなく、1 より大きいかどうかで判定してください。
+// Every value is clamped into range: TotalPages is 1 even for an empty list, and PrevPage
+// and NextPage are between 1 and TotalPages. Templates are expected to switch on HasPrev /
+// HasNext and use PrevPage / NextPage only as link targets. Decide whether to show a pager
+// by whether TotalPages is greater than 1, not by whether it is 0.
 func New(page, perPage, total int) PageMeta {
 	if total < 0 {
 		total = 0
@@ -68,7 +69,7 @@ func New(page, perPage, total int) PageMeta {
 	}
 }
 
-// Offset は、このページの先頭までに読み飛ばす件数です。
+// Offset is the number of items to skip before the start of this page.
 func (m PageMeta) Offset() int {
 	if m.PerPage <= 0 {
 		return 0
@@ -76,11 +77,11 @@ func (m PageMeta) Offset() int {
 	return (m.Page - 1) * m.PerPage
 }
 
-// WithItemCount は、実際に取得できた件数に合わせて From / To を補正した複製を返します。
+// WithItemCount returns a copy with From / To adjusted to the number of items actually fetched.
 //
-// 一覧は ID を並べてからメタデータ本体を読みにいくため、一部の読み込みに失敗すると
-// 表示件数が New の想定より少なくなります。「1〜10 件目を表示」と出しながら 8 件しか
-// 並ばない、というズレを防ぐために使います。Total は変えません。
+// A listing orders the IDs first and then reads each item's metadata, so when some reads
+// fail, fewer items are shown than New assumed. Use it to avoid saying "showing items 1-10"
+// while only 8 are listed. Total is left unchanged.
 func (m PageMeta) WithItemCount(itemCount int) PageMeta {
 	if m.Total == 0 {
 		return m

@@ -1,13 +1,13 @@
-// Package slogctx は、context に積んだ属性を自動で付与する slog.Handler と、
-// ログレベルの解決ヘルパーを提供します。
+// Package slogctx provides a slog.Handler that automatically adds attributes carried on
+// the context, and a helper for resolving log levels.
 //
-// リクエスト ID やジョブ ID のような「そのスコープのログすべてに載せたい値」を、
-// 各ログ呼び出しへ引数で配って回らずに相関させるための仕組みです。
-// 標準の slog.Logger.With はロガーを引き回す必要がありますが、こちらは context に
-// 乗るため、既存の slog.XxxContext(ctx, ...) 呼び出しをそのまま相関ログにできます。
+// It correlates values that belong on every log line in a scope, such as a request ID or
+// job ID, without passing them as arguments to each logging call. The standard
+// slog.Logger.With requires threading the logger through; these attributes ride the
+// context instead, so existing slog.XxxContext(ctx, ...) calls become correlated as they are.
 //
-// 出力フォーマットには関与しません。GCP の Cloud Logging 向けに severity などを
-// 詰め替える場合は、その HandlerOptions を持つハンドラーを NewHandler で包んでください。
+// It does not touch the output format. To remap keys such as severity for GCP Cloud Logging,
+// wrap a handler carrying those HandlerOptions with NewHandler.
 package slogctx
 
 import (
@@ -17,13 +17,14 @@ import (
 	"strings"
 )
 
-// ParseLevel は環境変数などの文字列を slog のレベルへ変換します。
-// 前後の空白は無視し、大文字小文字は区別しません。未知の値と空文字は Info とみなします。
+// ParseLevel converts a string, such as an environment variable, to a slog level.
+// Surrounding whitespace is ignored and case does not matter. Unknown values and the
+// empty string are treated as Info.
 //
-// 解釈は slog.Level.UnmarshalText に委ねるため、"DEBUG" などの名前に加えて
-// slog が定める相対表記（"DEBUG+2" や "ERROR-1"）もそのまま使えます。
-// "WARNING" だけは slog が受け付けないものの、環境変数としては広く使われるため
-// "WARN" と同義に扱います。
+// Parsing is delegated to slog.Level.UnmarshalText, so besides names such as "DEBUG",
+// slog's relative notation ("DEBUG+2", "ERROR-1") works as is.
+// "WARNING" is not accepted by slog, but it is common in environment variables, so it is
+// treated as a synonym for "WARN".
 func ParseLevel(raw string) slog.Level {
 	name := strings.ToUpper(strings.TrimSpace(raw))
 	if name == "WARNING" {
@@ -39,11 +40,11 @@ func ParseLevel(raw string) slog.Level {
 
 type contextKey struct{}
 
-// With は以降のログすべてに付与される属性を context に積みます。
-// 積んだ属性は、NewHandler で包んだハンドラーがレコードへ自動的に追加します。
+// With adds attributes to the context that are attached to every subsequent log record.
+// A handler wrapped with NewHandler adds them to each record automatically.
 //
-// 元の context が持つ属性は変更しないため、同じ context から分岐した処理同士が
-// 互いの属性を汚染することはありません。
+// The attributes held by the parent context are not modified, so work branched from the
+// same context never pollutes each other's attributes.
 func With(ctx context.Context, attrs ...slog.Attr) context.Context {
 	if len(attrs) == 0 {
 		return ctx
@@ -57,7 +58,7 @@ func With(ctx context.Context, attrs ...slog.Attr) context.Context {
 	return context.WithValue(ctx, contextKey{}, merged)
 }
 
-// Attrs は context に積まれた属性を返します。積まれていなければ nil を返します。
+// Attrs returns the attributes carried on the context, or nil if there are none.
 func Attrs(ctx context.Context) []slog.Attr {
 	return attrsFrom(ctx)
 }
@@ -70,13 +71,13 @@ func attrsFrom(ctx context.Context) []slog.Attr {
 	return attrs
 }
 
-// NewHandler は、context に積まれた属性をレコードへ付与するハンドラーで base を包みます。
+// NewHandler wraps base in a handler that adds the context's attributes to each record.
 //
-// キーが衝突したときの扱いは 2 つです。レコードが既に持っているキーは context から足さず
-// （呼び出し側が渡したその場の値のほうが具体的なため）、context 自身の重複は後から積んだ
-// ほうを残します（With を重ねるのはスコープを内側へ絞る操作のため）。
-// ただし logger.With で足された属性は委譲先が保持していてここからは見えないため、
-// そちらとの衝突は防げません。相関 ID は context に載せてください。
+// Key collisions are resolved by two rules. A key the record already has is not added
+// from the context (the value the call site passed is more specific), and among the
+// context's own duplicates the one added later wins (nesting With narrows the scope).
+// Attributes added with logger.With, however, are held by the delegate and invisible here,
+// so collisions with them cannot be prevented. Put correlation IDs on the context.
 func NewHandler(base slog.Handler) slog.Handler {
 	return &handler{Handler: base}
 }
@@ -85,12 +86,13 @@ type handler struct {
 	slog.Handler
 }
 
-// Handle は context 由来の属性を足したうえで委譲先のハンドラーへ渡します。
+// Handle adds the context's attributes and passes the record to the delegate handler.
 //
-// 衝突したキーを落とさずに両方載せると、出力に同じキーが 2 つ並びます。JSON としては
-// 不正ではないため誰も失敗せず、解釈は取り込む側任せになります。Cloud Logging は連結する
-// ので job_id が "job-1job-1" となり、その ID で検索しても当たりません。相関のために載せた
-// 属性が相関を壊すうえ、壊れるのは呼び出し側も同じキーを載せた行、つまり重要な行に偏ります。
+// Emitting both copies of a colliding key puts the same key twice in the output. That is
+// still valid JSON, so nothing fails and interpretation is left to the ingesting side.
+// Cloud Logging concatenates them, so job_id becomes "job-1job-1" and a search for that ID
+// finds nothing. The attribute added for correlation breaks correlation, and it breaks on
+// the lines where the call site passed the same key too, which are the important ones.
 func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 	attrs := attrsFrom(ctx)
 	if len(attrs) == 0 {
@@ -103,8 +105,8 @@ func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 		return true
 	})
 
-	// context 自身の重複は後から積んだほうを残すため、後ろから見て初出だけを拾い、
-	// 並びは元のまま戻します。
+	// Among the context's own duplicates the later one wins, so walk from the back keeping
+	// only the first occurrence, then restore the original order.
 	kept := make([]slog.Attr, 0, len(attrs))
 	for _, a := range slices.Backward(attrs) {
 		if _, dup := seen[a.Key]; dup {
@@ -119,8 +121,8 @@ func (h *handler) Handle(ctx context.Context, record slog.Record) error {
 	return h.Handler.Handle(ctx, record)
 }
 
-// WithAttrs / WithGroup は委譲先を包み直し、context 属性の付与を維持します。
-// 包み直さないと、logger.With(...) を通した時点で context 由来の属性が失われます。
+// WithAttrs / WithGroup re-wrap the delegate so context attributes keep being added.
+// Without re-wrapping, the context's attributes would be lost as soon as logger.With(...) is used.
 func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &handler{Handler: h.Handler.WithAttrs(attrs)}
 }

@@ -1,4 +1,4 @@
-# CI の実体は shouni/workflows。ジョブ構成とタグ運用の理由はそちらの README にある。
+# The CI itself lives in shouni/workflows; its README explains the job layout and tag policy.
 name: CI
 
 on:
@@ -18,7 +18,7 @@ jobs:
   ci:
     uses: shouni/workflows/.github/workflows/go-ci.yml@v1
     with:
-      # jobid の検証はセキュリティ境界（URL とストレージのパスに直接載る）。
-      # 手書きのバイト走査なので、表のテストではなく探索で埋める。
+      # jobid validation is a security boundary (IDs go straight into URL and storage paths).
+      # It is a hand-written byte scan, so it is covered by fuzzing rather than table tests.
       fuzz-targets: "./jobid#FuzzSanitize ./jobid#FuzzCreatedAt"
       fuzz-time: 60s

@@ -20,7 +20,7 @@ func ExampleFrom() {
 }
 
 func ExampleParse() {
-	// タイムゾーン情報を含まない文字列を、ホストの設定によらず JST として解釈する。
+	// Interpret a string without time zone information as JST, whatever the host is set to.
 	t, err := jst.Parse("18:30", "15:04")
 	if err != nil {
 		fmt.Println("error:", err)

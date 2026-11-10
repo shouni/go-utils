@@ -8,65 +8,67 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Reference](https://pkg.go.dev/badge/github.com/shouni/go-utils.svg)](https://pkg.go.dev/github.com/shouni/go-utils)
 
-## 🚀 概要 (About) - 複数プロジェクトで重複していた、標準ライブラリだけの小物
+English | [日本語](README.ja.md)
 
-**`Go Utils`** は、複数のプロジェクトで実際に重複していた小さな処理だけを集めたモジュールです。パッケージ同士は独立しているため、必要なものだけをインポートできます。
+## 🚀 About - small, stdlib-only pieces that were duplicated across several projects
 
-## ✨ 収録基準 (What belongs here)
+**`Go Utils`** collects only the small pieces of code that were actually duplicated across several projects. The packages are independent of each other, so you can import just the ones you need.
 
-`utils` という名前は何でも受け入れてしまうため、収録の可否は以下で判断します。
+## ✨ What belongs here
 
-1. **外部依存を持たない** — 標準ライブラリだけで完結すること。
-   *現在このモジュールの `go.mod` に `require` はありません。例外は作らない方針です。*
-2. **I/O やインフラに触れない** — ネットワーク・ファイルシステム・クラウドSDKを扱うものは対象外です。
-   それらは `go-remote-io` や `gcp-kit` など、目的別のライブラリへ置いてください。
-3. **2つ以上のプロジェクトから使われる** — 単一プロジェクトでしか使わないものは、
-   その利用者側の `internal/` に置いてください。汎用に見えても、実際にはそのプロジェクト固有の判断に紐づいていることが多いためです。
+A name like `utils` accepts anything, so admission is decided by the following rules.
 
-## 📦 パッケージ構成 (Package Structure)
+1. **No external dependencies** — everything must work with the standard library alone.
+   *This module's `go.mod` currently has no `require`, and the policy is to make no exceptions.*
+2. **No I/O or infrastructure** — anything dealing with the network, the filesystem or cloud SDKs is out of scope.
+   Put it in a purpose-built library such as `go-remote-io` or `gcp-kit`.
+3. **Used by two or more projects** — anything used by only one project belongs in
+   that project's `internal/`. Code that looks general is usually tied to one project's own judgement.
 
-| パッケージ | 説明 | 主な提供機能 |
+## 📦 Package Structure
+
+| Package | Description | Main features |
 | --- | --- | --- |
-| **`jobid`** | **非同期ジョブ識別子**の生成・検証・正規化を行います。ジョブ ID は URL パスとストレージパスの双方に現れるため、検証はセキュリティ境界を兼ねます。 | 検証 (`Validate`, `IsValid`) と種類別のエラー (`ErrEmpty`, `ErrTooLong`, `ErrInvalidFormat`)、パストラバーサル対策の正規化 (`Sanitize`)、用途プレフィックスと生成時刻を含む ID の採番 (`New`)、埋め込み時刻の復元 (`CreatedAt`) と並べ替えキー (`SortKey`) |
-| **`slogctx`** | **context に積んだ属性を自動付与する `slog.Handler`** を提供します。リクエスト ID やジョブ ID を各ログ呼び出しへ配って回らずに相関できます。出力フォーマットには関与しません。 | ログレベル解決 (`ParseLevel`)、属性の積み上げ (`With`, `Attrs`)、ハンドラーのラップ (`NewHandler`) |
-| **`jst`** | **日本標準時 (JST) への変換**など、時刻処理を単純化します。表示層向けで、永続化する時刻は UTC のまま扱う想定です。 | 現在時刻の取得 (`Now`)、任意の時刻を JST へ変換 (`From`)、整形 (`Format`) と定数つきの近道 (`FormatDisplay`, `FormatTimestamp`)、環境非依存のパース (`Parse`)、ロケーション取得 (`Location`)、表示レイアウト定数 (`LayoutDisplay`, `LayoutTimestamp`) |
-| **`paging`** | **一覧応答のページメタデータ** (`PageMeta`) と、総件数からの組み立て (`New`)。GCS 系と Firestore 系の一覧が同じ JSON 形を返すための共通の型です。 | 組み立て (`New`)、読み飛ばし件数 (`Offset`)、実際の取得件数への補正 (`WithItemCount`) |
-| **`strlist`** | 設定値として読み込んだ**分割済みの文字列リスト**を整えます。カンマ区切りの分割そのものは設定ライブラリの担当で、その後始末を引き受けます。 | 前後の空白・空要素・重複を落とす正規化 (`Normalize`)、大文字小文字を区別しない正規化 (`NormalizeFold`) |
+| **`jobid`** | Generates, validates and normalises **asynchronous job identifiers**. A job ID appears both in URL paths and in storage paths, so validation doubles as a security boundary. | Validation (`Validate`, `IsValid`) with per-kind errors (`ErrEmpty`, `ErrTooLong`, `ErrInvalidFormat`), normalisation against path traversal (`Sanitize`), minting IDs with a purpose prefix and creation time (`New`), recovering the embedded time (`CreatedAt`) and a sort key (`SortKey`) |
+| **`slogctx`** | Provides **a `slog.Handler` that automatically adds attributes carried on the context**. Request IDs and job IDs can be correlated without handing them to every logging call. It does not touch the output format. | Log level resolution (`ParseLevel`), adding attributes (`With`, `Attrs`), wrapping a handler (`NewHandler`) |
+| **`jst`** | Simplifies time handling such as **converting to Japan Standard Time (JST)**. It is meant for the display layer; persisted times are expected to stay in UTC. | Current time (`Now`), converting any time to JST (`From`), formatting (`Format`) with shortcuts for the constants (`FormatDisplay`, `FormatTimestamp`), environment-independent parsing (`Parse`), the location (`Location`), display layout constants (`LayoutDisplay`, `LayoutTimestamp`) |
+| **`paging`** | **Page metadata for listing responses** (`PageMeta`) and building it from a total count (`New`). The common type that lets GCS-backed and Firestore-backed listings return the same JSON shape. | Building (`New`), the number of items to skip (`Offset`), adjusting to the number of items actually fetched (`WithItemCount`) |
+| **`strlist`** | Tidies **already-split string lists** read in as configuration values. Splitting on commas is the configuration library's job; this handles the cleanup after it. | Normalisation that drops surrounding whitespace, empty elements and duplicates (`Normalize`), case-insensitive normalisation (`NormalizeFold`) |
 
-## 🚦 使い方 (Usage)
+## 🚦 Usage
 
-`go get github.com/shouni/go-utils` で入れ、インポートはパッケージ単位で行います
-（例: `import "github.com/shouni/go-utils/jobid"`）。
+Install with `go get github.com/shouni/go-utils` and import per package
+(e.g. `import "github.com/shouni/go-utils/jobid"`).
 
-### ジョブ ID の検証と正規化 (`jobid`)
+### Validating and normalising job IDs (`jobid`)
 
 ```go
 import "github.com/shouni/go-utils/jobid"
 
-// URLパスやストレージパスへ埋め込む前に、パス要素を落として検証します
+// Drop path elements and validate before embedding the ID in a URL or storage path
 id, err := jobid.Sanitize("../../20260725123456-abcd1234")
 // id => "20260725123456-abcd1234"
 
-// 埋め込まれた生成時刻を UTC で取り出します（表示は jst で JST へ変換）
+// Extract the embedded creation time in UTC (convert to JST with jst for display)
 createdAt, err := jobid.CreatedAt("video-recipe-20260725-150405-a1b2c3d4")
 // createdAt => 2026-07-25 15:04:05 +0000 UTC
 
-// 用途プレフィックスが混在する一覧を、作成日時の降順で並べるためのキー
+// A key for sorting a list with mixed purpose prefixes newest-first by creation time
 key := jobid.SortKey("video-recipe-20260725-150405-a1b2c3d4")
-// key => "20260725150405"（時刻を持たない ID では空文字）
+// key => "20260725150405" (empty for an ID without a timestamp)
 ```
 
-検証の失敗は種類ごとに `errors.Is` で判定できます。
+Validation failures can be classified by kind with `errors.Is`.
 
 ```go
 switch {
-case errors.Is(err, jobid.ErrEmpty):         // 空（または空白のみ）
-case errors.Is(err, jobid.ErrTooLong):       // MaxLength 超過
-case errors.Is(err, jobid.ErrInvalidFormat): // 使えない文字を含む
+case errors.Is(err, jobid.ErrEmpty):         // empty (or whitespace only)
+case errors.Is(err, jobid.ErrTooLong):       // exceeds MaxLength
+case errors.Is(err, jobid.ErrInvalidFormat): // contains a disallowed character
 }
 ```
 
-### context を使ったログの相関 (`slogctx`)
+### Correlating logs through the context (`slogctx`)
 
 ```go
 import (
@@ -76,33 +78,34 @@ import (
 	"github.com/shouni/go-utils/slogctx"
 )
 
-// ハンドラーを包むと、context に積んだ属性が以降のログすべてに載ります
+// Once the handler is wrapped, attributes carried on the context appear on every later log line
 base := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slogctx.ParseLevel(os.Getenv("LOG_LEVEL"))})
 slog.SetDefault(slog.New(slogctx.NewHandler(base)))
 
 ctx = slogctx.With(ctx, slog.String("job_id", jobID))
 slog.InfoContext(ctx, "phase started") // => {"job_id":"...", ...}
 
-// 呼び出し側が同じキーを渡した場合は、その場の値のほうが具体的なので呼び出し側だけが載ります
+// When the call site passes the same key, its value is more specific, so only the call site's value appears
 slog.InfoContext(ctx, "phase started", "job_id", "other") // => {"job_id":"other", ...}
 ```
 
-同じキーを 2 度積んだ場合は後から積んだほうが残ります。ただし `logger.With` で足した属性は
-委譲先が保持していてここからは見えないため、そちらとの衝突は防げません。相関 ID は
-context に載せてください。衝突時の扱いとその理由は `NewHandler` のコメントにあります。
+When the same key is added twice, the one added later wins. Attributes added with `logger.With`,
+however, are held by the delegate handler and invisible here, so collisions with them cannot be
+prevented. Put correlation IDs on the context. How collisions are handled, and why, is explained in
+the comment on `NewHandler`.
 
-### 時刻の表示 (`jst`)
+### Displaying times (`jst`)
 
 ```go
 import "github.com/shouni/go-utils/jst"
 
-// 永続化された UTC の時刻を、表示の直前で JST へ変換します
-jst.FormatDisplay(createdAt)   // => "2026-07-25 15:04 JST"   一覧向け（分精度）
-jst.FormatTimestamp(createdAt) // => "2026/07/25 15:04:05 JST" 通知フッター向け（秒精度）
+// Convert a persisted UTC time to JST just before display
+jst.FormatDisplay(createdAt)   // => "2026-07-25 15:04 JST"   for listings (minute precision)
+jst.FormatTimestamp(createdAt) // => "2026/07/25 15:04:05 JST" for notification footers (second precision)
 ```
 
-`jobid` / `jst` / `strlist` には `example_test.go`（`go test` で出力まで検証される実行可能な例）があります。詳しい使い方はそちらを参照してください。
+`jobid` / `jst` / `strlist` have an `example_test.go` (runnable examples whose output is verified by `go test`). See them for more detailed usage.
 
-## 📜 ライセンス (License)
+## 📜 License
 
-このプロジェクトは [MIT License](https://opensource.org/licenses/MIT) の下で公開されています。
+This project is released under the [MIT License](https://opensource.org/licenses/MIT).
